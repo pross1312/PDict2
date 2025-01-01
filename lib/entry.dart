@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:pdict/ListInput.dart';
 
 class EntryData {
   EntryData();
   EntryData.from({required this.key, required this.pronounciation, required this.definitions, required this.usages, required this.groups});
-  String key = "io12j3io12j3i oj12io3 jio123j io1j2io 3j1o2i j3o1 2j3oj";
-  String pronounciation = "";
-  List<String> definitions = ["1231i2j 3oi1 2", "JI!J#IO@!J #IO@!J #OI", "j 12io3j 1io2j3oi12j 3oi", "JWQIEJ", "JQWEIO JQWOE", "QWJEIOJQWOEJ OQ", "1231i2j 3oi1 2", "JI!J#IO@!J #IO@!J #OI", "j 12io3j 1io2j3oi12j 3oi", "JWQIEJ", "JQWEIO JQWOE", "QWJEIOJQWOEJ OQ", "1231i2j 3oi1 2", "JI!J#IO@!J #IO@!J #OI", "j 12io3j 1io2j3oi12j 3oi", "JWQIEJ", "JQWEIO JQWOE", "QWJEIOJQWOEJ OQ", "JI!J#IO@!J #IO@!J #OI", "j 12io3j 1io2j3oi12j 3oi", "JWQIEJ", "JQWEIO JQWOE", "QWJEIOJQWOEJ OQ", "1231i2j 3oi1 2", "JI!J#IO@!J #IO@!J #OI", "j 12io3j 1io2j3oi12j 3oi", "JWQIEJ", "JQWEIO JQWOE", "QWJEIOJQWOEJ OQ", "1231i2j 3oi1 2", "JI!J#IO@!J #IO@!J #OI", "j 12io3j 1io2j3oi12j 3oi", "JWQIEJ", "JQWEIO JQWOE", "QWJEIOJQWOEJ OQ", "JI!J#IO@!J #IO@!J #OI", "j 12io3j 1io2j3oi12j 3oi", "JWQIEJ", "JQWEIO JQWOE", "QWJEIOJQWOEJ OQ", "1231i2j 3oi1 2", "JI!J#IO@!J #IO@!J #OI", "j 12io3j 1io2j3oi12j 3oi", "JWQIEJ", "JQWEIO JQWOE", "QWJEIOJQWOEJ OQ", "1231i2j 3oi1 2", "JI!J#IO@!J #IO@!J #OI", "j 12io3j 1io2j3oi12j 3oi", "JWQIEJ", "JQWEIO JQWOE", "QWJEIOJQWOEJ OQ"   ];
-  List<String> usages = [];
+  String key = "Keyword";
+  String pronounciation = "testing";
+  List<String> definitions = ["Hello world", "How are you today", "I am fine thankyou and you", "Hello world", "How are you today", "I am fine thankyou and you", "Hello world", "How are you today", "I am fine thankyou and you", "Hello world", "How are you today", "I am fine thankyou and you", "Hello world", "How are you today", "I am fine thankyou and you", "Hello world", "How are you today", "I am fine thankyou and you", "Hello world", "How are you today", "I am fine thankyou and you", "Hello world", "How are you today", "I am fine thankyou and you", "Hello world", "How are you today", "I am fine thankyou and you", "Hello world", "How are you today", "I am fine thankyou and you", ];
+  List<String> usages = ["Checking out usages", "Nice right"];
   List<String> groups = [];
   int lastLearned = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 }
@@ -17,53 +18,70 @@ class Entry extends StatefulWidget {
   final EntryData data;
 
   @override
-  State<StatefulWidget> createState() => EntryWidget();
+  State<StatefulWidget> createState() => EntryState();
 }
 
-class EntryWidget extends State<Entry> {
-  bool isEditting = false;
+class EntryState extends State<Entry> {
+
+  late List<TextEditingController> definitionInputControllers;
+
+  late List<TextEditingController> usageInputControllers;
+
+  final labelStyle = const TextStyle(
+    fontSize: 20,
+    color: Colors.red,
+    fontWeight: FontWeight.bold,
+  );
 
   @override
-  Widget build(BuildContext context) => Column(
-    verticalDirection: VerticalDirection.down,
-    children: [
-      Text(
-        widget.data.key,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w900,
-          fontSize: 25,
-        ),
-      ),
-      TextField(
-        style: const TextStyle(color: Colors.white),
-        autocorrect: false,
-        cursorColor: Colors.white,
-        textAlign: TextAlign.center,
-        enabled: isEditting,
-        onChanged: (value) => widget.data.pronounciation = value,
-      ),
-      Column(
-        children: [
-          const Text("Definition", textAlign: TextAlign.left, style: TextStyle(color: Colors.white)),
-          Container(
-            child: ListView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              itemCount: widget.data.definitions.length,
-              itemBuilder: (BuildContext context, int index) {
-                return Text(widget.data.definitions[index], style: const TextStyle(color: Colors.red));
-              },
-            )
-          ),
+  Widget build(BuildContext context) {
+    definitionInputControllers = List.generate(
+      widget.data.definitions.length,
+      (int index) => TextEditingController(text: widget.data.definitions[index])
+    );
+    usageInputControllers = List.generate(
+      widget.data.usages.length,
+      (int index) => TextEditingController(text: widget.data.usages[index])
+    );
+    return CustomScrollView(
+      slivers: <Widget>[
+        SliverList.list(
+          children: [
+            Text(widget.data.key, textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
+            TextField(
+              decoration: InputDecoration(
+                hintText: "Pronounciation",
+                hintStyle: Theme.of(context).textTheme.titleLarge,
+                border: InputBorder.none,
+              ),
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center
+            ),
+            Container(
+              child: Text("Definition", style: labelStyle),
+              margin: EdgeInsets.only(top: 10)
+            ),
+            ...listInput(definitionInputControllers),
+            Container(
+              child: Text("Usage", style: labelStyle),
+              margin: EdgeInsets.only(top: 10)
+            ),
+            ...listInput(usageInputControllers)
+          ]
+        )
+      ]
+    );
+  }
 
-        ],
+  List<Widget> listInput(List<TextEditingController> controllers) => List.generate(
+    controllers.length,
+    (int index) => Container(
+      height: 50,
+      child: TextField(
+        controller: controllers[index],
+        style: Theme.of(context).textTheme.bodySmall,
+        textAlign: TextAlign.left
       ),
-      TextButton(
-        onPressed: () => setState(() => isEditting = !isEditting),
-        child: const Text("Switch", style: TextStyle(color: Colors.white))
-      ),
-    ],
+    ),
   );
 }
