@@ -5,6 +5,7 @@
 #define OUTPUT_DIR "build"
 #define SOURCE_DIR "src"
 #define NDK_PATH "/home/dvtuong/android-sdk/ndk/android-ndk-r27c"
+#define RAYLIB_DIR "raylib-5.5"
 #define SDK_PATH "/home/dvtuong/android-sdk"
 #define ANDROID_VERSION "35"
 #define BUILD_TOOLS SDK_PATH"/build-tools/"ANDROID_VERSION".0.0"
@@ -35,15 +36,15 @@ bool build_native_android_lib(Cmd *cmd) {
                     "-DANDROID", "-DANDROIDVERSION="ANDROID_VERSION,
                     "-Wall", "-Wextra",
                     "-ffunction-sections", "-Os", "-fdata-sections", "-Wall", "-fvisibility=hidden",
-                    "-I"SOURCE_DIR,
+                    "-I"RAYLIB_DIR"/include",
                     "-I"NDK_PATH"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include"
                     "-m64",
                     "-fPIC",
                      "-o", OUTPUT_DIR"/lib/"ANDROID_ABI"/lib"APP_NAME".so",
-                    SOURCE_DIR"/android_native_app_glue.c", SOURCE_DIR"/main.c",
-                    "-L"NDK_PATH"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib"
+                    SOURCE_DIR"/main.c",
+                    "-L"NDK_PATH"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib", "-L"RAYLIB_DIR"/lib",
                     "-Wl,--gc-sections"/*, "-Wl,-Map=output.map"*/, "-s",
-                    "-lm", "-lGLESv3", "-lEGL", "-landroid", "-llog", "-lOpenSLES",
+                    "-lm", "-lGLESv3", "-lEGL", "-landroid", "-llog", "-lOpenSLES", "-l:libraylib.a",
                     "-shared", "-uANativeActivity_onCreate");
     return cmd_run_sync_and_reset(cmd);
 }

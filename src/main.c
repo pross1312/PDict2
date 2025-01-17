@@ -1,49 +1,24 @@
 #include <stdio.h>
-
-#define CNFG_IMPLEMENTATION
-#include "android_native_app_glue.h"
-#include "rawdraw_sf.h"
-struct android_app * gapp;
-
-void HandleKey(int keycode, int bDown) {
-    (void)keycode, (void)bDown;
-}
-void HandleButton(int x, int y, int button, int bDown) {
-    (void)x, (void)y, (void)button, (void)bDown;
-}
-void HandleMotion(int x, int y, int mask) {
-    (void)x, (void)y, (void)mask;
-}
-int HandleDestroy() { return 0; }
-void HandleResume() { }
-void HandleSuspend() { }
+#include <raylib.h>
 
 int main(int argc, char ** argv) {
     (void)argc, (void)argv;
-    CNFGSetupFullscreen("", 0);
 
-    short width, height;
-    CNFGGetDimensions(&width, &height);
+    InitWindow(600, 600, "test");
+    int width = GetScreenHeight();
+    int height = GetScreenWidth();
+    const char *text = "Hello world";
+    const int font_size = 45;
+    TraceLog(LOG_INFO, "Width: %d, Height: %d", width, height);
+    while (!WindowShouldClose()) {
+        BeginDrawing();
 
-    const char *hello_world = "Hello world";
-    const short textsize = 15;
+        ClearBackground(GetColor(0x101010ff));
+        int text_width = MeasureText(text, font_size);
+        DrawText(text, (width-text_width)/2.0f, (height-font_size)/2.0f, font_size, WHITE);
 
-	while(CNFGHandleInput()) {
-
-		CNFGColor(0x101010ff);
-		CNFGClearFrame();
-
-        {
-            int w, h;
-            CNFGGetTextExtents(hello_world, &w, &h, textsize);
-            CNFGColor(0xffffffff);
-            CNFGPenX = (width-w)/2.0f; CNFGPenY = (height-h)/2.0f;
-            CNFGSetLineWidth(3);
-            CNFGDrawText("Hello world", 15);
-        }
-		CNFGFlushRender();
-		CNFGSwapBuffers();		
-	}
-
+        EndDrawing();
+    }
+    CloseWindow();
     return 0;
 }

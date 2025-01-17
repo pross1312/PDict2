@@ -1,9 +1,6 @@
 # PDict2
-Porting my [PDict](https://github.com/pross1312/PDict) to android.
-
-Using c and [rawdraw](https://github.com/cntools/rawdraw) so i don't have to work with Java/Kotlin and Android Studio.
-
-Build using [nob.h](https://github.com/tsoding/nob.h).
+Rewrite my **[PDict](https://github.com/pross1312/PDict)** application to android. Using c and **[raylib](https://github.com/raysan5/raylib)** so i don't have to work with Java/Kotlin and Android Studio.<br>
+Build using a very simple library **[nob.h](https://github.com/tsoding/nob.h)**.
 
 ## Quickstart
 ```bash
