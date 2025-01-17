@@ -281,7 +281,7 @@ Nob_File_Type nob_get_file_type(const char *path);
             while ((da)->count + (new_items_count) > (da)->capacity) {                        \
                 (da)->capacity *= 2;                                                        \
             }                                                                               \
-            (da)->items = NOB_REALLOC((da)->items, (da)->capacity*sizeof(*(da)->items)); \
+            (da)->items = (NOB_REALLOC((da)->items, (da)->capacity*sizeof(*(da)->items))); \
             NOB_ASSERT((da)->items != NULL && "Buy more RAM lol");                          \
         }                                                                                   \
         memcpy((da)->items + (da)->count, (new_items), (new_items_count)*sizeof(*(da)->items)); \

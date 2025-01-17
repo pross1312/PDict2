@@ -6,6 +6,7 @@
 #define SOURCE_DIR "src"
 #define NDK_PATH "/home/dvtuong/android-sdk/ndk/android-ndk-r27c"
 #define RAYLIB_DIR "raylib-5.5"
+#define SQLITE_DIR "sqlite3"
 #define SDK_PATH "/home/dvtuong/android-sdk"
 #define ANDROID_VERSION "35"
 #define BUILD_TOOLS SDK_PATH"/build-tools/"ANDROID_VERSION".0.0"
@@ -32,21 +33,44 @@
 bool build_native_android_lib(Cmd *cmd) {
     if (!mkdir_if_not_exists(OUTPUT_DIR"/lib")) return false;
     if (!mkdir_if_not_exists(OUTPUT_DIR"/lib/"ANDROID_ABI)) return false;
+
+    const char *sqlite_lib_path = OUTPUT_DIR"/lib/"ANDROID_ABI"/libsqlite.so";
+    const char *sqlite_source = SQLITE_DIR"/sqlite3.c";
+    if (needs_rebuild1(sqlite_lib_path, sqlite_source)) {
+        cmd_append(cmd, ANDROID_CC, "-Wall", "-Wextra",
+                        "-DANDROID", "-DANDROIDVERSION="ANDROID_VERSION,
+                        "-Os", "-Wall",
+                        "-m64", "-fPIC",
+                        "-o", sqlite_lib_path,
+                        sqlite_source,
+                        "-s", "-shared");
+        if (!cmd_run_sync_and_reset(cmd)) return 1;
+    }
     cmd_append(cmd, ANDROID_CC,
                     "-DANDROID", "-DANDROIDVERSION="ANDROID_VERSION,
-                    "-Wall", "-Wextra",
                     "-ffunction-sections", "-Os", "-fdata-sections", "-Wall", "-fvisibility=hidden",
+
+                    "-I"SQLITE_DIR,
                     "-I"RAYLIB_DIR"/include",
-                    "-I"NDK_PATH"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include"
-                    "-m64",
-                    "-fPIC",
+                    "-I"NDK_PATH"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+                    "-I"NDK_PATH"/sources/android/native_app_glue",
+                    "-I"SOURCE_DIR"/helper",
+
+                    "-m64", "-fPIC",
                      "-o", OUTPUT_DIR"/lib/"ANDROID_ABI"/lib"APP_NAME".so",
-                    SOURCE_DIR"/main.c",
-                    "-L"NDK_PATH"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib", "-L"RAYLIB_DIR"/lib",
+
+                    "-Wall", "-Wextra", SOURCE_DIR"/main.c",
+                    "-Wno-unused-variable", SOURCE_DIR"/helper/jni_helper.c",
+
+                    "-L"NDK_PATH"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib",
+                    "-L"RAYLIB_DIR"/lib", "-L"OUTPUT_DIR"/lib/"ANDROID_ABI,
                     "-Wl,--gc-sections"/*, "-Wl,-Map=output.map"*/, "-s",
-                    "-lm", "-lGLESv3", "-lEGL", "-landroid", "-llog", "-lOpenSLES", "-l:libraylib.a",
+                    "-lm", "-lGLESv3", "-lEGL", "-landroid", "-llog", "-lOpenSLES", "-l:libraylib.a", "-lsqlite",
                     "-shared", "-uANativeActivity_onCreate");
     return cmd_run_sync_and_reset(cmd);
+}
+
+bool build_sqlite_lib(Cmd *cmd) {
 }
 
 
@@ -76,6 +100,7 @@ bool build_android_apk(Cmd *cmd, const char *keystore, const char *keystore_pass
             "-f", "-F", APK_PATH,
             "-I", ANDROID_JAR,
             "-M", ANDROID_MANIFEST_PATH,
+            "-A", "android_res/asset",
             "-S", "android_res/res",
             /*"-A", "android_res/assets",*/
             "-v",
@@ -85,7 +110,7 @@ bool build_android_apk(Cmd *cmd, const char *keystore, const char *keystore_pass
     size_t snapshot = temp_save();
     const char *current_dir = get_current_dir_temp();
     if (!set_current_dir(OUTPUT_DIR)) return false;
-    cmd_append(cmd, BUILD_TOOLS"/aapt", "add", APP_NAME".apk", "lib/"ANDROID_ABI"/libPDict.so");
+    cmd_append(cmd, BUILD_TOOLS"/aapt", "add", APP_NAME".apk", "lib/"ANDROID_ABI"/libPDict.so", "lib/"ANDROID_ABI"/libsqlite.so");
     if (!cmd_run_sync_and_reset(cmd)) return false;
     if (!nob_set_current_dir(current_dir)) return false;
 
