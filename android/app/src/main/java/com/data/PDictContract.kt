@@ -15,26 +15,16 @@ object PDictContract {
                 "${this.COLUMN_LAST_READ_NAME} INTEGER NOT NULL" +
             ");";
     }
-    object SchemaGroup {
-        const val _ID = "id";
-        const val TABLE_NAME = "group"
-        const val COLUMN_GROUP_NAME = "group_name"
-        const val CREATE_QUERY =
-            "CREATE TABLE ${this.TABLE_NAME} (" +
-                "${this._ID} INTEGER PRIMARY KEY," +
-                "${this.COLUMN_GROUP_NAME} TEXT UNIQUE NOT NULL" +
-            ");";
-    }
     object SchemaGroupEntry {
         const val _ID = "id";
         const val TABLE_NAME = "entry_group"
         const val COLUMN_ENTRY_ID_NAME = "entry_id"
-        const val COLUMN_GROUP_ID_NAME = "group_id"
+        const val COLUMN_GROUP_NAME = "group_name"
         const val CREATE_QUERY =
             "CREATE TABLE ${this.TABLE_NAME} (" +
                 "${this._ID} INTEGER PRIMARY KEY," +
                 "${this.COLUMN_ENTRY_ID_NAME} INTEGER NOT NULL REFERENCES ${SchemaEntry.TABLE_NAME}(${SchemaEntry._ID})," +
-                "${this.COLUMN_GROUP_ID_NAME} INTEGER NOT NULL REFERENCES ${SchemaGroup.TABLE_NAME}(${SchemaGroup._ID})" +
+                "${this.COLUMN_GROUP_NAME} TEXT NOT NULL" +
             ");";
     }
     object SchemaDefinition {
@@ -63,5 +53,5 @@ object PDictContract {
     }
 
     const val CREATE_QUERY =
-        "${SchemaEntry.CREATE_QUERY}\n${SchemaGroup.CREATE_QUERY}\n${SchemaGroupEntry.CREATE_QUERY}\n${SchemaDefinition.CREATE_QUERY}\n${SchemaUsage.CREATE_QUERY}"
+        "${SchemaEntry.CREATE_QUERY}\n${SchemaGroupEntry.CREATE_QUERY}\n${SchemaDefinition.CREATE_QUERY}\n${SchemaUsage.CREATE_QUERY}"
 }

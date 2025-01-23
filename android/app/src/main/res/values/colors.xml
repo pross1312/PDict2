@@ -4,4 +4,5 @@
     <color name="white">#ffffffff</color>
     <color name="black">#ff000000</color>
     <color name="pronounciation">@color/black</color>
+    <color name="text">@color/black</color>
 </resources>

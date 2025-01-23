@@ -1,23 +1,50 @@
 package com.view
 
 import android.os.Bundle
+import android.util.Log
+import android.view.inputmethod.EditorInfo
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.data.PDictSqlite
-import com.pdict.R
+import com.pdict.databinding.ActivityHomeBinding
 
-class ActivityHome: AppCompatActivity(R.layout.activity_home) {
-    val pdictDb by lazy { PDictSqlite(filesDir.path) }
-
+class ActivityHome: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        pdictDb.openDatabase("pdict", true);
+        PDictSqlite.instance.dir = filesDir.path
+        val binding = ActivityHomeBinding.inflate(layoutInflater)
+        val fragmentEntry = (supportFragmentManager.findFragmentById(binding.fragmentEntry.id) as FragmentEntry)
+
+        binding.searchBtn.setOnClickListener {
+            val keyword = binding.searchBox.editableText.toString().trim()
+            if (keyword.isNotEmpty()) {
+                // TODO: search
+                Log.i(TAG, "Search for $keyword")
+                fragmentEntry.search(keyword)
+            }
+        };
+
+        binding.searchBox.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                binding.searchBtn.performClick()
+                return@setOnEditorActionListener true
+            }
+            return@setOnEditorActionListener false
+        }
+
+
+        setContentView(binding.root)
+
+        if (!PDictSqlite.instance.isOpen && !PDictSqlite.instance.openDatabase(db_name, false)) {
+            Log.i(TAG, "Could not open database $db_name")
+            getContent.launch("*/*")
+        }
     }
 
     val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             contentResolver.openInputStream(uri)?.let {
-                pdictDb.importDatabase(it, "test");
+                PDictSqlite.instance.importDatabase(it, db_name);
             }
         }
     }
@@ -25,5 +52,6 @@ class ActivityHome: AppCompatActivity(R.layout.activity_home) {
 
     companion object {
         val TAG = "PDict:ActivityHome"
+        private val db_name: String = "pdict";
     }
 }

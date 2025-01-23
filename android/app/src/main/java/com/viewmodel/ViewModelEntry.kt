@@ -5,16 +5,21 @@ import android.view.ViewGroup
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.recyclerview.widget.RecyclerView
+import com.data.PDictContract
+import com.data.PDictSqlite
 import com.pdict.databinding.AdapterItemBinding
 
 data class Entry(
-    var keyword: String = "tuong",
-    var pronounciation: String = "t u o n g",
-    var definitions: Array<String> = arrayOf("tuong", "tuong123", "i1o2j3oi2", "tuong", "tuong", "tuong123", "i1o2j3oi2", "tuong", "tuong", "tuong123", "i1o2j3oi2", "tuong", "tuong", "tuong123", "i1o2j3oi2", "tuong"),
-    var usages: Array<String> = arrayOf("tuong123", "tuong123", "J!IO@#JO@", "J!IO@#JIO!@#", "tuong123", "tuong123", "J!IO@#JO@", "J!IO@#JIO!@#", "tuong", "tuong123", "i1o2j3oi2", "tuong", "tuong", "tuong123", "i1o2j3oi2", "tuong"),
+    var id: Int = 0,
+    var keyword: String = "",
+    var pronounciation: String = "",
+    var definitions: List<String> = emptyList(),
+    var usages: List<String> = emptyList(),
+    var groups: List<String> = emptyList(),
+    var last_read: Int = 0,
 );
 
-class Adapter(private val data: Array<String>) : RecyclerView.Adapter<Adapter.ViewHolder>() {
+class Adapter(private val data: List<String>) : RecyclerView.Adapter<Adapter.ViewHolder>() {
     class ViewHolder(private val binding: AdapterItemBinding): RecyclerView.ViewHolder(binding.root) {
         fun bind(data: String) {
             binding.text.text = data;
@@ -29,9 +34,36 @@ class Adapter(private val data: Array<String>) : RecyclerView.Adapter<Adapter.Vi
     override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(data[position]);
 }
 
-class ViewModelEntry: ViewModel() {
+class ViewModelEntry : ViewModel() {
     val entry: MutableLiveData<Entry> = MutableLiveData(Entry());
+    val definitions: MutableList<String> = mutableListOf()
+    val usages: MutableList<String> = mutableListOf()
+    val groups: MutableList<String> = mutableListOf()
 
-    val definitionAdapter = Adapter(entry.value?.definitions!!)
-    val usageAdapter = Adapter(entry.value?.usages!!)
+    val definitionAdapter = Adapter(definitions)
+    val groupAdapter = Adapter(groups)
+    val usageAdapter = Adapter(usages)
+
+    fun setEntry(newEntry: Entry) {
+        entry.value = newEntry
+        val definitionsOldLength = definitions.size
+        definitions.clear()
+        definitions.addAll(newEntry.definitions)
+        definitionAdapter.notifyItemRangeChanged(0, maxOf(definitionsOldLength, definitions.size))
+
+        val usagesOldLength = usages.size
+        usages.clear()
+        usages.addAll(newEntry.usages)
+        usageAdapter.notifyItemRangeChanged(0, maxOf(usagesOldLength, usages.size))
+
+        val groupsOldLength = groups.size
+        groups.clear()
+        groups.addAll(newEntry.groups)
+        groupAdapter.notifyItemRangeChanged(0, maxOf(groupsOldLength, groups.size))
+    }
+
+    fun search(keyword: String) {
+        val newEntry = PDictSqlite.instance.query(keyword)
+        setEntry(newEntry ?: Entry())
+    }
 }
