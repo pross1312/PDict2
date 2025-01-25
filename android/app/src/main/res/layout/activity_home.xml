@@ -8,44 +8,56 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.view.ActivityHome"
-    android:padding="3dp"
-    >
+    android:padding="3dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_weight="0"
-        android:background="@drawable/rounded_rectangle"
-        android:paddingVertical="3dp" >
-        <EditText
-            android:id="@+id/search_box"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:backgroundTint="@color/text"
-            android:layout_weight="1"
-            android:singleLine="true"
-            android:imeOptions="actionSearch"
-            android:paddingLeft="9dp"
-            android:background="@color/transparent" />
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:scaleY="0.8"
-            android:background="@color/text"
-            android:alpha="0.75" />
-        <ImageButton
-            android:id="@+id/search_btn"
+        android:layout_weight="0">
+        <Button
+            android:id="@+id/learnBtn"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@android:drawable/ic_search_category_default"
-            android:backgroundTint="@color/transparent"
-            android:scaleType="centerCrop"
-            android:padding="0dp"
-            android:rotationY="180"
-            android:layout_margin="0dp"
+            android:layout_height="match_parent"
             android:layout_weight="0"
-            app:tint="@color/text" />
+            android:text="Learn"
+            android:backgroundTint="@color/white"/>
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/rounded_rectangle"
+            android:paddingVertical="3dp"
+            android:layout_weight="1">
+            <EditText
+                android:id="@+id/search_box"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:backgroundTint="@color/text"
+                android:layout_weight="1"
+                android:singleLine="true"
+                android:imeOptions="actionSearch"
+                android:paddingLeft="9dp"
+                android:background="@color/transparent" />
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:scaleY="0.8"
+                android:background="@color/text"
+                android:alpha="0.75" />
+            <ImageButton
+                android:id="@+id/search_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@android:drawable/ic_search_category_default"
+                android:backgroundTint="@color/transparent"
+                android:scaleType="centerCrop"
+                android:padding="0dp"
+                android:rotationY="180"
+                android:layout_margin="0dp"
+                android:layout_weight="0"
+                app:tint="@color/text" />
+        </LinearLayout>
     </LinearLayout>
 
     <androidx.fragment.app.FragmentContainerView

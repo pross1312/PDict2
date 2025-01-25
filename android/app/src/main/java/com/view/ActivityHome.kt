@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.inputmethod.EditorInfo
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import android.content.Intent
 import com.data.PDictSqlite
 import com.pdict.databinding.ActivityHomeBinding
 
@@ -14,11 +15,15 @@ class ActivityHome: AppCompatActivity() {
         PDictSqlite.instance.dir = filesDir.path
         val binding = ActivityHomeBinding.inflate(layoutInflater)
         val fragmentEntry = (supportFragmentManager.findFragmentById(binding.fragmentEntry.id) as FragmentEntry)
+        binding.learnBtn.setOnClickListener {
+            Log.i(TAG, "Learning")
+            val intent = Intent(this, ActivityLearn::class.java)
+            startActivity(intent)
+        }
 
         binding.searchBtn.setOnClickListener {
             val keyword = binding.searchBox.editableText.toString().trim()
             if (keyword.isNotEmpty()) {
-                // TODO: search
                 Log.i(TAG, "Search for $keyword")
                 fragmentEntry.search(keyword)
             }

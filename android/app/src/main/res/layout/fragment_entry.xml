@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:clickable="false">
     <data>
         <variable
             name="viewModel"
@@ -14,12 +15,6 @@
             android:layout_width="match_parent"
             android:orientation="vertical"
             android:layout_height="wrap_content">
-            <androidx.recyclerview.widget.RecyclerView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                android:orientation="horizontal"
-                android:adapter="@{viewModel.groupAdapter}"/>
             <TextView
                 android:id="@+id/keyword"
                 android:layout_width="match_parent"
@@ -27,30 +22,50 @@
                 android:textAlignment="center"
                 android:text="@{viewModel.entry.keyword}"/>
             <EditText
+                android:id="@+id/pronounciation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@color/transparent"
                 android:textColor="@color/pronounciation"
                 android:layout_gravity="center"
                 android:text="@={viewModel.entry.pronounciation}"/>
-            <TextView
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/groups"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Definition" />
-            <androidx.recyclerview.widget.RecyclerView
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                android:orientation="horizontal"
+                android:adapter="@{viewModel.groupAdapter}"/>
+            <LinearLayout
+                android:id="@+id/definitions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                android:adapter="@{viewModel.definitionAdapter}"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Usage"/>
-            <androidx.recyclerview.widget.RecyclerView
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Definition" />
+                <androidx.recyclerview.widget.RecyclerView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    android:adapter="@{viewModel.definitionAdapter}"/>
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/usages"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                android:adapter="@{viewModel.usageAdapter}"/>
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Usage"/>
+                <androidx.recyclerview.widget.RecyclerView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    android:adapter="@{viewModel.usageAdapter}"/>
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 </layout>

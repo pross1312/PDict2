@@ -3,6 +3,7 @@ package com.data;
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
 import android.database.sqlite.SQLiteDatabase.OpenParams
+import android.database.Cursor
 import android.util.Log
 import com.viewmodel.Entry
 import com.data.PDictContract.SchemaEntry
@@ -100,6 +101,64 @@ class PDictSqlite private constructor() : Closeable {
         return listOf()
     }
 
+    private fun parseEntryTableRow(entry: Entry, cursor: Cursor) {
+        entry.id = cursor.getInt(cursor.getColumnIndexOrThrow(SchemaEntry._ID));
+        entry.keyword = cursor.getString(cursor.getColumnIndexOrThrow(SchemaEntry.COLUMN_KEYWORD_NAME));
+        entry.pronounciation = cursor.getString(cursor.getColumnIndexOrThrow(SchemaEntry.COLUMN_PRONOUNCIATION_NAME));
+        entry.last_read = cursor.getInt(cursor.getColumnIndexOrThrow(SchemaEntry.COLUMN_LAST_READ_NAME));
+    }
+
+    private fun fetchGroups(entry: Entry, id: Int) {
+        db.query(
+            SchemaGroupEntry.TABLE_NAME,
+            null,
+            "${SchemaGroupEntry.COLUMN_ENTRY_ID_NAME} = ?",
+            arrayOf(id.toString()),
+            null,
+            null,
+            null
+        ).use {
+            entry.groups = List<String>(it.count) { _ ->
+                it.moveToNext()
+                return@List it.getString(it.getColumnIndexOrThrow(SchemaGroupEntry.COLUMN_GROUP_NAME))
+            }
+        }
+    }
+
+    private fun fetchDefinitions(entry: Entry, id: Int) {
+        db.query(
+            SchemaDefinition.TABLE_NAME,
+            null,
+            "${SchemaDefinition.COLUMN_ENTRY_ID_NAME} = ?",
+            arrayOf(id.toString()),
+            null,
+            null,
+            null
+        ).use {
+            entry.definitions = List<String>(it.count) { _ ->
+                it.moveToNext()
+                return@List it.getString(it.getColumnIndexOrThrow(SchemaDefinition.COLUMN_DEFINITION_NAME))
+            }
+        }
+    }
+
+    private fun fetchUsages(entry: Entry, id: Int) {
+        db.query(
+            SchemaUsage.TABLE_NAME,
+            null,
+            "${SchemaUsage.COLUMN_ENTRY_ID_NAME} = ?",
+            arrayOf(id.toString()),
+            null,
+            null,
+            null
+        ).use {
+            entry.usages = List<String>(it.count) { _ ->
+                it.moveToNext()
+                return@List it.getString(it.getColumnIndexOrThrow(SchemaUsage.COLUMN_USAGE_NAME))
+            }
+        }
+    }
+
     fun query(keyword: String): Entry? {
         val query = "SELECT * FROM ${SchemaEntry.TABLE_NAME} WHERE ${SchemaEntry.COLUMN_KEYWORD_NAME} = ?0";
         var result = Entry()
@@ -115,55 +174,38 @@ class PDictSqlite private constructor() : Closeable {
             if (it.count > 1) throw Exception("Find 2 entry with the same keyword")
             if (it.count == 0) return null
             it.moveToFirst()
-            result.id = it.getInt(it.getColumnIndexOrThrow(SchemaEntry._ID));
-            result.keyword = it.getString(it.getColumnIndexOrThrow(SchemaEntry.COLUMN_KEYWORD_NAME));
-            result.pronounciation = it.getString(it.getColumnIndexOrThrow(SchemaEntry.COLUMN_PRONOUNCIATION_NAME));
-            result.last_read = it.getInt(it.getColumnIndexOrThrow(SchemaEntry.COLUMN_LAST_READ_NAME));
+            parseEntryTableRow(result, it)
         }
-        db.query(
-            SchemaDefinition.TABLE_NAME,
-            null,
-            "${SchemaDefinition.COLUMN_ENTRY_ID_NAME} = ?",
-            arrayOf(result.id.toString()),
-            null,
-            null,
-            null
-        ).use {
-            result.definitions = List<String>(it.count) { _ ->
-                it.moveToNext()
-                return@List it.getString(it.getColumnIndexOrThrow(SchemaDefinition.COLUMN_DEFINITION_NAME))
-            }
-        }
-        db.query(
-            SchemaUsage.TABLE_NAME,
-            null,
-            "${SchemaUsage.COLUMN_ENTRY_ID_NAME} = ?",
-            arrayOf(result.id.toString()),
-            null,
-            null,
-            null
-        ).use {
-            result.usages = List<String>(it.count) { _ ->
-                it.moveToNext()
-                return@List it.getString(it.getColumnIndexOrThrow(SchemaUsage.COLUMN_USAGE_NAME))
-            }
-        }
-        db.query(
-            SchemaGroupEntry.TABLE_NAME,
-            null,
-            "${SchemaGroupEntry.COLUMN_ENTRY_ID_NAME} = ?",
-            arrayOf(result.id.toString()),
-            null,
-            null,
-            null
-        ).use {
-            result.groups = List<String>(it.count) { _ ->
-                it.moveToNext()
-                return@List it.getString(it.getColumnIndexOrThrow(SchemaGroupEntry.COLUMN_GROUP_NAME))
-            }
-        }
+        fetchGroups(result, result.id)
+        fetchDefinitions(result, result.id)
+        fetchUsages(result, result.id)
         Log.i(TAG, "Query for $keyword, result: $result")
         return result;
+    }
+
+    fun nextword(): Entry? {
+        val result = Entry()
+        db.query(
+            SchemaEntry.TABLE_NAME,
+            null, 
+            null, 
+            null, 
+            null, 
+            null, 
+            "${SchemaEntry.COLUMN_LAST_READ_NAME} ASC",
+            "1"
+        ).use {
+            if (it.count > 1) throw Exception("Not possible since limit is 1")
+            if (it.count == 0) return null
+            it.moveToFirst()
+            parseEntryTableRow(result, it)
+        }
+        fetchGroups(result, result.id)
+        fetchDefinitions(result, result.id)
+        fetchUsages(result, result.id)
+
+        Log.i(TAG, "Next learn word $result")
+        return result
     }
 
     override fun close() {

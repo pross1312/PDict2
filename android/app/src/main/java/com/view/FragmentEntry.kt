@@ -2,7 +2,9 @@ package com.view
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.util.Log
 import android.view.View
+import android.view.MotionEvent
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -35,7 +37,35 @@ class FragmentEntry: Fragment() {
         _binding = null;
     }
 
-    fun search(keyword: String) {
-        viewModel.search(keyword)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        if (savedInstanceState == null) {
+            viewModel.editable.observe(viewLifecycleOwner) {
+                // TODO: set editable
+            }
+            viewModel.keywordVisible.observe(viewLifecycleOwner) { visible ->
+                binding.keyword.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+            }
+            viewModel.pronounciationVisible.observe(viewLifecycleOwner) { visible ->
+                binding.pronounciation.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+            }
+            viewModel.groupVisible.observe(viewLifecycleOwner) { visible ->
+                binding.groups.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+            }
+            viewModel.definitionVisible.observe(viewLifecycleOwner) { visible ->
+                binding.definitions.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+            }
+            viewModel.usageVisible.observe(viewLifecycleOwner) { visible ->
+                binding.usages.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+            }
+        }
+    }
+
+    fun toggleAnswer() = viewModel.toggleAnswer()
+    fun search(keyword: String) = viewModel.search(keyword)
+    fun nextword(): Boolean = viewModel.nextword();
+
+    companion object {
+        val TAG = "PDict:FragmentEntry"
     }
 }

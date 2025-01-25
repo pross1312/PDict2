@@ -35,14 +35,21 @@ class Adapter(private val data: List<String>) : RecyclerView.Adapter<Adapter.Vie
 }
 
 class ViewModelEntry : ViewModel() {
-    val entry: MutableLiveData<Entry> = MutableLiveData(Entry());
-    val definitions: MutableList<String> = mutableListOf()
-    val usages: MutableList<String> = mutableListOf()
-    val groups: MutableList<String> = mutableListOf()
+    val entry       : MutableLiveData<Entry> = MutableLiveData(Entry());
+    val definitions : MutableList<String> = mutableListOf()
+    val usages      : MutableList<String> = mutableListOf()
+    val groups      : MutableList<String> = mutableListOf()
 
     val definitionAdapter = Adapter(definitions)
     val groupAdapter = Adapter(groups)
     val usageAdapter = Adapter(usages)
+
+    var editable              : MutableLiveData<Boolean> = MutableLiveData(true)
+    var keywordVisible        : MutableLiveData<Boolean> = MutableLiveData(true)
+    var pronounciationVisible : MutableLiveData<Boolean> = MutableLiveData(true)
+    var groupVisible          : MutableLiveData<Boolean> = MutableLiveData(true)
+    var definitionVisible     : MutableLiveData<Boolean> = MutableLiveData(true)
+    var usageVisible          : MutableLiveData<Boolean> = MutableLiveData(true)
 
     fun setEntry(newEntry: Entry) {
         entry.value = newEntry
@@ -65,5 +72,18 @@ class ViewModelEntry : ViewModel() {
     fun search(keyword: String) {
         val newEntry = PDictSqlite.instance.query(keyword)
         setEntry(newEntry ?: Entry())
+    }
+
+    fun nextword(): Boolean {
+        val newEntry = PDictSqlite.instance.nextword()
+        setEntry(newEntry ?: Entry())
+        return newEntry != null
+    }
+
+    fun toggleAnswer() {
+        keywordVisible.value = !(keywordVisible.value ?: false)
+        pronounciationVisible.value = !(pronounciationVisible.value ?: false)
+        definitionVisible.value = !(definitionVisible.value ?: false)
+        usageVisible.value = !(usageVisible.value ?: false)
     }
 }
