@@ -7,7 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.recyclerview.widget.RecyclerView
 import com.data.PDictContract
 import com.data.PDictSqlite
-import com.pdict.databinding.AdapterItemBinding
+import com.pdict.databinding.DefinitionUsageItemBinding
+import com.pdict.databinding.GroupItemBinding
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -32,15 +33,30 @@ data class Entry(
 }"""
 };
 
-class Adapter(private val data: List<String>) : RecyclerView.Adapter<Adapter.ViewHolder>() {
-    class ViewHolder(private val binding: AdapterItemBinding): RecyclerView.ViewHolder(binding.root) {
+class GroupAdapter(private val data: List<String>) : RecyclerView.Adapter<GroupAdapter.ViewHolder>() {
+    class ViewHolder(private val binding: GroupItemBinding): RecyclerView.ViewHolder(binding.root) {
         fun bind(data: String) {
             binding.text.text = data;
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        return ViewHolder(AdapterItemBinding.inflate(LayoutInflater.from(parent.context), parent, false));
+        return ViewHolder(GroupItemBinding.inflate(LayoutInflater.from(parent.context), parent, false));
+    }
+
+    override fun getItemCount(): Int = data.size;
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(data[position]);
+}
+
+class DefinitionUsageAdapter(private val data: List<String>) : RecyclerView.Adapter<DefinitionUsageAdapter.ViewHolder>() {
+    class ViewHolder(private val binding: DefinitionUsageItemBinding): RecyclerView.ViewHolder(binding.root) {
+        fun bind(data: String) {
+            binding.text.text = data;
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        return ViewHolder(DefinitionUsageItemBinding.inflate(LayoutInflater.from(parent.context), parent, false));
     }
 
     override fun getItemCount(): Int = data.size;
@@ -53,9 +69,9 @@ class ViewModelEntry : ViewModel() {
     val usages      : MutableList<String> = mutableListOf()
     val groups      : MutableList<String> = mutableListOf()
 
-    val definitionAdapter = Adapter(definitions)
-    val groupAdapter = Adapter(groups)
-    val usageAdapter = Adapter(usages)
+    val definitionAdapter = DefinitionUsageAdapter(definitions)
+    val groupAdapter = GroupAdapter(groups)
+    val usageAdapter = DefinitionUsageAdapter(usages)
 
     fun setEntry(newEntry: Entry) {
         entry.value = newEntry

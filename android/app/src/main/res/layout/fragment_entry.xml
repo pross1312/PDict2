@@ -20,15 +20,16 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAlignment="center"
-                android:text="@{viewModel.entry.keyword}"/>
+                android:text="@{viewModel.entry.keyword}"
+                style="@style/keyword"/>
             <EditText
                 android:id="@+id/pronounciation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@color/transparent"
-                android:textColor="@color/pronounciation"
                 android:layout_gravity="center"
-                android:text="@={viewModel.entry.pronounciation}"/>
+                android:text="@={viewModel.entry.pronounciation}"
+                style="@style/pronounciation"/>
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/groups"
                 android:layout_width="wrap_content"

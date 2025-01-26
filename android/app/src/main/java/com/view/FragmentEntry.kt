@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+// import androidx.recyclerview.widget.DividerItemDecoration
 import com.data.PDictSqlite
 import com.pdict.R;
 import com.pdict.databinding.FragmentEntryBinding
@@ -64,6 +65,7 @@ class FragmentEntry: Fragment() {
         _binding = FragmentEntryBinding.inflate(inflater, container, false);
         binding.viewModel = viewModel;
         binding.lifecycleOwner = this;
+        // binding.groups.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.HORIZONTAL));
         return binding.root;
     }
 

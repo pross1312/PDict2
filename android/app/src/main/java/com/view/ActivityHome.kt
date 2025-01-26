@@ -10,11 +10,15 @@ import com.data.PDictSqlite
 import com.pdict.databinding.ActivityHomeBinding
 
 class ActivityHome: AppCompatActivity() {
+    lateinit var binding: ActivityHomeBinding
+    val fragmentEntry: FragmentEntry by lazy { supportFragmentManager.findFragmentById(binding.fragmentEntry.id) as FragmentEntry }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         PDictSqlite.instance.dir = filesDir.path
-        val binding = ActivityHomeBinding.inflate(layoutInflater)
-        val fragmentEntry = (supportFragmentManager.findFragmentById(binding.fragmentEntry.id) as FragmentEntry)
+        binding = ActivityHomeBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
         binding.learnBtn.setOnClickListener {
             Log.i(TAG, "Learning")
             val intent = Intent(this, ActivityLearn::class.java)
@@ -37,13 +41,15 @@ class ActivityHome: AppCompatActivity() {
             return@setOnEditorActionListener false
         }
 
-
-        setContentView(binding.root)
-
         if (!PDictSqlite.instance.isOpen && !PDictSqlite.instance.openDatabase(db_name, false)) {
             Log.i(TAG, "Could not open database $db_name")
             getContent.launch("*/*")
         }
+    }
+
+    override fun onStart() {
+        super.onStart();
+        fragmentEntry.search("ある")
     }
 
     val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
