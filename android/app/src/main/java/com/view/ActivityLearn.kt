@@ -14,20 +14,22 @@ class ActivityLearn : FragmentActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLearnBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        binding.nextBtn.setOnClickListener {
-            if (!fragmentEntry.nextword()) {
-                // TODO: display no word to learn
-            }
-        }
     }
 
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_UP) {
-            Log.i(TAG, "Activity learn touch event")
-            fragmentEntry.toggleAnswer()
+    override fun onStart() {
+        super.onStart()
+        fragmentEntry.mode = FragmentEntry.EntryMode.Learn
+        binding.nextBtn.setOnClickListener {
+            if (!fragmentEntry.answerVisible) {
+                fragmentEntry.answerVisible = true
+            } else {
+                if (!fragmentEntry.nextword()) {
+                    // TODO: display no word to learn
+                } else {
+                    fragmentEntry.answerVisible = false
+                }
+            }
         }
-        return true
     }
 
     companion object {

@@ -15,11 +15,46 @@ import com.pdict.databinding.FragmentEntryBinding
 import com.viewmodel.ViewModelEntry
 
 class FragmentEntry: Fragment() {
+    public enum class EntryMode {
+        Learn, Edit
+    }
     val viewModel: ViewModelEntry by lazy {
         ViewModelProvider(requireActivity())[ViewModelEntry::class.java];
     }
     var _binding: FragmentEntryBinding? = null;
     val binding get() = _binding!!;
+    private var _mode = EntryMode.Edit
+    var mode: EntryMode
+        get() = _mode
+        set(value) {
+            when (value) {
+                EntryMode.Learn -> {
+                    if (_mode != EntryMode.Learn) {
+                        answerVisible = false
+                        binding.pronounciation.focusable = View.NOT_FOCUSABLE
+                        if (!viewModel.nextword()) {
+                            // TODO: handle no word to learn
+                        }
+                    }
+                }
+                EntryMode.Edit -> {
+                    answerVisible = true
+                    binding.pronounciation.focusable = View.FOCUSABLE
+                    // TODO: handle edit mode
+                }
+            }
+            _mode = value
+        }
+
+    var answerVisible: Boolean
+        get() = binding.keyword.visibility == View.VISIBLE
+        set(visible) {
+            binding.keyword.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+            binding.pronounciation.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+            // binding.groups.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+            // binding.definitions.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+            binding.usages.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,31 +74,14 @@ class FragmentEntry: Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        if (savedInstanceState == null) {
-            viewModel.editable.observe(viewLifecycleOwner) {
-                // TODO: set editable
-            }
-            viewModel.keywordVisible.observe(viewLifecycleOwner) { visible ->
-                binding.keyword.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
-            }
-            viewModel.pronounciationVisible.observe(viewLifecycleOwner) { visible ->
-                binding.pronounciation.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
-            }
-            viewModel.groupVisible.observe(viewLifecycleOwner) { visible ->
-                binding.groups.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
-            }
-            viewModel.definitionVisible.observe(viewLifecycleOwner) { visible ->
-                binding.definitions.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
-            }
-            viewModel.usageVisible.observe(viewLifecycleOwner) { visible ->
-                binding.usages.visibility = if (visible) { View.VISIBLE } else { View.INVISIBLE }
-            }
-        }
     }
 
-    fun toggleAnswer() = viewModel.toggleAnswer()
-    fun search(keyword: String) = viewModel.search(keyword)
     fun nextword(): Boolean = viewModel.nextword();
+    fun search(keyword: String) = viewModel.search(keyword)
+    fun toggleAnswer(): Boolean {
+        answerVisible = !answerVisible
+        return answerVisible
+    }
 
     companion object {
         val TAG = "PDict:FragmentEntry"

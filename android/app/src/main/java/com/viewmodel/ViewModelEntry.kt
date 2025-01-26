@@ -8,16 +8,29 @@ import androidx.recyclerview.widget.RecyclerView
 import com.data.PDictContract
 import com.data.PDictSqlite
 import com.pdict.databinding.AdapterItemBinding
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 data class Entry(
-    var id: Int = 0,
+    var id: Long = 0,
     var keyword: String = "",
     var pronounciation: String = "",
     var definitions: List<String> = emptyList(),
     var usages: List<String> = emptyList(),
     var groups: List<String> = emptyList(),
-    var last_read: Int = 0,
-);
+    var last_read: Long = 0,
+) {
+    override fun toString(): String = """{
+    id = $id,
+    keyword = $keyword,
+    pronounciation = $pronounciation,
+    definitions = [${definitions.joinToString(" | ")}],
+    usages = [${usages.joinToString(" | ")}],
+    groups = [${groups.joinToString(" | ")}],
+    last_read = ${DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault()).format(Instant.ofEpochSecond(last_read))},
+}"""
+};
 
 class Adapter(private val data: List<String>) : RecyclerView.Adapter<Adapter.ViewHolder>() {
     class ViewHolder(private val binding: AdapterItemBinding): RecyclerView.ViewHolder(binding.root) {
@@ -43,13 +56,6 @@ class ViewModelEntry : ViewModel() {
     val definitionAdapter = Adapter(definitions)
     val groupAdapter = Adapter(groups)
     val usageAdapter = Adapter(usages)
-
-    var editable              : MutableLiveData<Boolean> = MutableLiveData(true)
-    var keywordVisible        : MutableLiveData<Boolean> = MutableLiveData(true)
-    var pronounciationVisible : MutableLiveData<Boolean> = MutableLiveData(true)
-    var groupVisible          : MutableLiveData<Boolean> = MutableLiveData(true)
-    var definitionVisible     : MutableLiveData<Boolean> = MutableLiveData(true)
-    var usageVisible          : MutableLiveData<Boolean> = MutableLiveData(true)
 
     fun setEntry(newEntry: Entry) {
         entry.value = newEntry
@@ -78,12 +84,5 @@ class ViewModelEntry : ViewModel() {
         val newEntry = PDictSqlite.instance.nextword()
         setEntry(newEntry ?: Entry())
         return newEntry != null
-    }
-
-    fun toggleAnswer() {
-        keywordVisible.value = !(keywordVisible.value ?: false)
-        pronounciationVisible.value = !(pronounciationVisible.value ?: false)
-        definitionVisible.value = !(definitionVisible.value ?: false)
-        usageVisible.value = !(usageVisible.value ?: false)
     }
 }

@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
 import android.database.sqlite.SQLiteDatabase.OpenParams
 import android.database.Cursor
+import android.content.ContentValues
 import android.util.Log
 import com.viewmodel.Entry
 import com.data.PDictContract.SchemaEntry
@@ -102,13 +103,13 @@ class PDictSqlite private constructor() : Closeable {
     }
 
     private fun parseEntryTableRow(entry: Entry, cursor: Cursor) {
-        entry.id = cursor.getInt(cursor.getColumnIndexOrThrow(SchemaEntry._ID));
+        entry.id = cursor.getLong(cursor.getColumnIndexOrThrow(SchemaEntry._ID));
         entry.keyword = cursor.getString(cursor.getColumnIndexOrThrow(SchemaEntry.COLUMN_KEYWORD_NAME));
         entry.pronounciation = cursor.getString(cursor.getColumnIndexOrThrow(SchemaEntry.COLUMN_PRONOUNCIATION_NAME));
-        entry.last_read = cursor.getInt(cursor.getColumnIndexOrThrow(SchemaEntry.COLUMN_LAST_READ_NAME));
+        entry.last_read = cursor.getLong(cursor.getColumnIndexOrThrow(SchemaEntry.COLUMN_LAST_READ_NAME));
     }
 
-    private fun fetchGroups(entry: Entry, id: Int) {
+    private fun fetchGroups(entry: Entry, id: Long) {
         db.query(
             SchemaGroupEntry.TABLE_NAME,
             null,
@@ -125,7 +126,7 @@ class PDictSqlite private constructor() : Closeable {
         }
     }
 
-    private fun fetchDefinitions(entry: Entry, id: Int) {
+    private fun fetchDefinitions(entry: Entry, id: Long) {
         db.query(
             SchemaDefinition.TABLE_NAME,
             null,
@@ -142,7 +143,7 @@ class PDictSqlite private constructor() : Closeable {
         }
     }
 
-    private fun fetchUsages(entry: Entry, id: Int) {
+    private fun fetchUsages(entry: Entry, id: Long) {
         db.query(
             SchemaUsage.TABLE_NAME,
             null,
@@ -159,8 +160,19 @@ class PDictSqlite private constructor() : Closeable {
         }
     }
 
+    private fun updateLastRead(id: Long) {
+        val rowsUpdated = db.update(
+            SchemaEntry.TABLE_NAME, 
+            ContentValues().apply {
+                put(SchemaEntry.COLUMN_LAST_READ_NAME, (System.currentTimeMillis() / 1000).toString())
+            }, 
+            "${SchemaEntry._ID} = ?",
+            arrayOf(id.toString())
+        )
+        Log.i(TAG, "Updated $rowsUpdated rows, set new last_read for entry $id")
+    }
+
     fun query(keyword: String): Entry? {
-        val query = "SELECT * FROM ${SchemaEntry.TABLE_NAME} WHERE ${SchemaEntry.COLUMN_KEYWORD_NAME} = ?0";
         var result = Entry()
         db.query(
             SchemaEntry.TABLE_NAME,
@@ -203,6 +215,7 @@ class PDictSqlite private constructor() : Closeable {
         fetchGroups(result, result.id)
         fetchDefinitions(result, result.id)
         fetchUsages(result, result.id)
+        updateLastRead(result.id)
 
         Log.i(TAG, "Next learn word $result")
         return result
