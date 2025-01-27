@@ -21,7 +21,7 @@
             android:layout_height="match_parent"
             android:layout_weight="0"
             android:text="Learn"
-            android:backgroundTint="@color/white"/>
+            style="@style/text_button"/>
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"

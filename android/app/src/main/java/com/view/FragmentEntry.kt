@@ -80,6 +80,7 @@ class FragmentEntry: Fragment() {
 
     fun nextword(): Boolean = viewModel.nextword();
     fun search(keyword: String) = viewModel.search(keyword)
+    val currentKeyword: String? get() = viewModel?.entry?.value?.keyword
     fun toggleAnswer(): Boolean {
         answerVisible = !answerVisible
         return answerVisible

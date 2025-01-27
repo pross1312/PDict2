@@ -2,12 +2,12 @@
 <layout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:clickable="true">
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context="com.view.ActivityLearn">
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/fragment_entry"
         android:layout_width="match_parent"
@@ -20,10 +20,17 @@
         android:gravity="end"
         android:orientation="horizontal">
         <Button
+            android:id="@+id/editBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Edit"
+            style="@style/text_button"/>
+        <Button
             android:id="@+id/nextBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Next"/>
+            android:text="Next"
+            style="@style/text_button"/>
     </LinearLayout>
 </LinearLayout>
 </layout>

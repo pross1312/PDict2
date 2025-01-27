@@ -64,7 +64,7 @@ class DefinitionUsageAdapter(private val data: List<String>) : RecyclerView.Adap
 }
 
 class ViewModelEntry : ViewModel() {
-    val entry       : MutableLiveData<Entry> = MutableLiveData(Entry());
+    val entry       : MutableLiveData<Entry> = MutableLiveData();
     val definitions : MutableList<String> = mutableListOf()
     val usages      : MutableList<String> = mutableListOf()
     val groups      : MutableList<String> = mutableListOf()
@@ -91,14 +91,15 @@ class ViewModelEntry : ViewModel() {
         groupAdapter.notifyItemRangeChanged(0, maxOf(groupsOldLength, groups.size))
     }
 
-    fun search(keyword: String) {
+    fun search(keyword: String): Boolean {
         val newEntry = PDictSqlite.instance.query(keyword)
-        setEntry(newEntry ?: Entry())
+        if (newEntry != null) setEntry(newEntry)
+        return newEntry != null
     }
 
     fun nextword(): Boolean {
         val newEntry = PDictSqlite.instance.nextword()
-        setEntry(newEntry ?: Entry())
+        if (newEntry != null) setEntry(newEntry)
         return newEntry != null
     }
 }
