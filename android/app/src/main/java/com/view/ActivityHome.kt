@@ -14,13 +14,13 @@ class ActivityHome: AppCompatActivity() {
     val fragmentEntry: FragmentEntry by lazy { supportFragmentManager.findFragmentById(binding.fragmentEntry.id) as FragmentEntry }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         // Apparently this i a bug since API 1.0 https://stackoverflow.com/questions/45468698/app-create-a-new-instance-when-user-click-on-app-icon
         if (!isTaskRoot && intent.hasCategory(Intent.CATEGORY_LAUNCHER) && intent.action?.equals(Intent.ACTION_MAIN) ?: false) {
             Log.i(TAG, "Stupid bug striked again!!!")
             finish();
             return;
         }
-        super.onCreate(savedInstanceState)
         PDictSqlite.instance.dir = filesDir.path
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
