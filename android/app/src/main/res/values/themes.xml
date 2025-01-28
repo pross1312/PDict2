@@ -26,7 +26,15 @@
     </style>
     <style name="text_button">
         <item name="android:textColor">@color/text</item>
-        <item name="android:padding">0dp</item>
+        <item name="android:backgroundTint">@color/light_black</item>
+    </style>
+    <style name="edit_text">
+        <item name="android:backgroundTint">@color/text</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:paddingLeft">9dp</item>
+        <item name="android:background">@color/transparent</item>
+    </style>
+    <style name="edit_group_item">
         <item name="android:backgroundTint">@color/light_black</item>
     </style>
 </resources>

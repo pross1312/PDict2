@@ -6,4 +6,5 @@
     <color name="light_black">#ff222222</color>
     <color name="pronounciation">@color/black</color>
     <color name="text">@color/black</color>
+    <color name="group_included">#ff8a9a7b</color>
 </resources>

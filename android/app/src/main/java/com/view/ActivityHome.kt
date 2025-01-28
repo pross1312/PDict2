@@ -46,15 +46,25 @@ class ActivityHome: AppCompatActivity() {
             }
             return@setOnEditorActionListener false
         }
+
+        binding.editGroupBtn.setOnClickListener {
+            fragmentEntry.currentEntry?.let {
+                val intent = Intent(this, ActivityEditGroup::class.java)
+                intent.putExtra(ActivityEditGroup.ID_KEY_NAME, it.id)
+                Log.i(TAG, "Edit group for ${it.id}")
+                startActivity(intent)
+            }
+        }
+
         if (!PDictSqlite.instance.isOpen && !PDictSqlite.instance.openDatabase(db_name, false)) {
             Log.i(TAG, "Could not open database $db_name")
             getContent.launch("*/*")
         }
     }
 
-    override fun onSaveInstanceState(bundle: Bundle) {
+    override fun onSaveInstanceState(outState: Bundle) {
         Log.i(TAG, "On save state")
-        super.onSaveInstanceState(bundle)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
@@ -100,5 +110,6 @@ class ActivityHome: AppCompatActivity() {
         private val db_name: String = "pdict";
         val SHARED_PREFERENCE_FILE = "pdict"
         val SHARED_PREFERENCE_NAME = "last_search"
+        val ID_KEY_NAME = "com.view.id"
     }
 }

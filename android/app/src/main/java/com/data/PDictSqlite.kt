@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteDatabase.OpenParams
 import android.database.Cursor
 import android.content.ContentValues
 import android.util.Log
-import com.viewmodel.Entry
 import com.data.PDictContract.SchemaEntry
 import com.data.PDictContract.SchemaUsage
 import com.data.PDictContract.SchemaDefinition
@@ -21,6 +20,10 @@ class PDictSqlite private constructor() : Closeable {
     val db get() = _db!!;
     var dir: String = ""
     val isOpen: Boolean get() = _db?.isOpen ?: false
+
+    init {
+        Log.i(TAG, PDictContract.CREATE_QUERY)
+    }
 
     fun newDatabase(name: String): PDictSqlite {
         Log.i(TAG, "Create new database $name");
@@ -98,9 +101,9 @@ class PDictSqlite private constructor() : Closeable {
         return true;
     }
 
-    fun list(page: Int = 0, limit: Int = 10, includes_group: List<String> = emptyList(), excludes_group: List<String> = emptyList()): List<String> {
-        return listOf()
-    }
+    // fun list(page: Int = 0, limit: Int = 10, includes_group: List<String> = emptyList(), excludes_group: List<String> = emptyList()): List<String> {
+    //     return listOf()
+    // }
 
     private fun parseEntryTableRow(entry: Entry, cursor: Cursor) {
         entry.id = cursor.getLong(cursor.getColumnIndexOrThrow(SchemaEntry._ID));
@@ -162,10 +165,10 @@ class PDictSqlite private constructor() : Closeable {
 
     private fun updateLastRead(id: Long) {
         val rowsUpdated = db.update(
-            SchemaEntry.TABLE_NAME, 
+            SchemaEntry.TABLE_NAME,
             ContentValues().apply {
                 put(SchemaEntry.COLUMN_LAST_READ_NAME, (System.currentTimeMillis() / 1000).toString())
-            }, 
+            },
             "${SchemaEntry._ID} = ?",
             arrayOf(id.toString())
         )
@@ -199,11 +202,11 @@ class PDictSqlite private constructor() : Closeable {
         val result = Entry()
         db.query(
             SchemaEntry.TABLE_NAME,
-            null, 
-            null, 
-            null, 
-            null, 
-            null, 
+            null,
+            null,
+            null,
+            null,
+            null,
             "${SchemaEntry.COLUMN_LAST_READ_NAME} ASC",
             "1"
         ).use {
@@ -219,6 +222,51 @@ class PDictSqlite private constructor() : Closeable {
 
         Log.i(TAG, "Next learn word $result")
         return result
+    }
+
+    // select distinct g1.group_name, g2.id from entry_group g1 left join entry_group g2 on g1.group_name = g2.group_name and g2.entry_id = '751';
+    fun findGroups(id: Long): List<EditGroupEntry> {
+        return db.rawQuery("""
+            SELECT distinct g1.${SchemaGroupEntry.COLUMN_GROUP_NAME} as ${SchemaGroupEntry.COLUMN_GROUP_NAME},
+                            g2.${SchemaGroupEntry._ID} AS ${SchemaGroupEntry._ID}
+            FROM entry_group g1
+            LEFT JOIN entry_group g2 ON g1.${SchemaGroupEntry.COLUMN_GROUP_NAME} = g2.${SchemaGroupEntry.COLUMN_GROUP_NAME}
+                                    AND g2.${SchemaGroupEntry.COLUMN_ENTRY_ID_NAME} = ?
+            ORDER BY g2.${SchemaGroupEntry._ID} DESC, g1.${SchemaGroupEntry.COLUMN_GROUP_NAME} ASC
+            """,
+            arrayOf(id.toString())
+        ).use {
+            List<EditGroupEntry>(it.count) { _ ->
+                it.moveToNext()
+                return@List EditGroupEntry(it.getString(it.getColumnIndexOrThrow(SchemaGroupEntry.COLUMN_GROUP_NAME)),
+                                           !it.isNull(it.getColumnIndexOrThrow(SchemaGroupEntry._ID)))
+            }
+        }
+    }
+
+    fun addGroup(id: Long, group: String): Boolean {
+        val newId = db.insert(
+            SchemaGroupEntry.TABLE_NAME,
+            null,
+            ContentValues().apply {
+                put(SchemaGroupEntry.COLUMN_ENTRY_ID_NAME, id.toString())
+                put(SchemaGroupEntry.COLUMN_GROUP_NAME, group.lowercase())
+            },
+        )
+        Log.i(TAG, "Add new group $group to $id")
+        return newId != -1L
+    }
+
+    fun removeGroup(id: Long, group: String): Int {
+        val rowsDeleted = SchemaGroupEntry.let {
+            db.delete(
+                it.TABLE_NAME,
+                "${it.COLUMN_ENTRY_ID_NAME} = ? AND ${it.COLUMN_GROUP_NAME} = ?",
+                arrayOf(id.toString(), group.lowercase())
+            )
+        }
+        Log.i(TAG, "Delete $rowsDeleted which has $id $group")
+        return rowsDeleted
     }
 
     override fun close() {

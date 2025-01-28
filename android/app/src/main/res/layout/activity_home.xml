@@ -33,12 +33,9 @@
                 android:id="@+id/search_box"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:backgroundTint="@color/text"
                 android:layout_weight="1"
-                android:singleLine="true"
                 android:imeOptions="actionSearch"
-                android:paddingLeft="9dp"
-                android:background="@color/transparent" />
+                style="@style/edit_text"/>
             <View
                 android:layout_width="1dp"
                 android:layout_height="match_parent"
@@ -66,5 +63,12 @@
         android:layout_weight="1"
         android:layout_height="0dp"
         android:name="com.view.FragmentEntry"/>
+    <Button
+        android:id="@+id/editGroupBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:text="Edit Group"
+        style="@style/text_button"/>
 </LinearLayout>
 </layout>

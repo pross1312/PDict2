@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 // import androidx.recyclerview.widget.DividerItemDecoration
 import com.data.PDictSqlite
+import com.data.Entry
 import com.pdict.R;
 import com.pdict.databinding.FragmentEntryBinding
 import com.viewmodel.ViewModelEntry
@@ -80,7 +81,8 @@ class FragmentEntry: Fragment() {
 
     fun nextword(): Boolean = viewModel.nextword();
     fun search(keyword: String) = viewModel.search(keyword)
-    val currentKeyword: String? get() = viewModel?.entry?.value?.keyword
+    val currentKeyword: String? get() = viewModel.entry.value?.keyword
+    val currentEntry: Entry? get() = viewModel.entry.value
     fun toggleAnswer(): Boolean {
         answerVisible = !answerVisible
         return answerVisible
