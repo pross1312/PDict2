@@ -13,6 +13,7 @@ import com.data.PDictContract.SchemaGroupEntry
 import java.io.Closeable
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
 import kotlin.io.path.Path
 
 class PDictSqlite private constructor() : Closeable {
@@ -41,6 +42,31 @@ class PDictSqlite private constructor() : Closeable {
         }
     }
 
+    fun exportDatabase(output: OutputStream, db_name: String): Boolean {
+        val path = Path(dir, db_name).toString()
+        val file = File(path)
+        if (!file.exists()) {
+            Log.i(TAG, "Database does not exists at $path")
+            return false
+        }
+        file.inputStream().use { inputStream ->
+            var readCount = 0;
+            val buffer = ByteArray(256);
+            try {
+                do {
+                    readCount = inputStream.read(buffer);
+                    if (readCount != -1) {
+                        output.write(buffer.sliceArray(0..<readCount))
+                    }
+                } while (readCount != -1);
+            } catch (ex: Exception) {
+                Log.i(TAG, ex.toString());
+                return false
+            }
+        }
+        return true
+    }
+
     fun importDatabase(input: InputStream, name: String): Boolean {
         Log.i(TAG, "Import database $name");
         val path = Path(dir, name).toString();
@@ -66,7 +92,8 @@ class PDictSqlite private constructor() : Closeable {
             // }
             return tryOpen(file);
         } else {
-            throw Exception("Database exist at $path");
+            Log.i(TAG, "Database exist at $path");
+            return false
         }
     }
 

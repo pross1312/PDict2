@@ -11,6 +11,7 @@ import com.pdict.databinding.ActivityHomeBinding
 
 class ActivityHome: AppCompatActivity() {
     lateinit var binding: ActivityHomeBinding
+    var keyword: String? = null
     val fragmentEntry: FragmentEntry by lazy { supportFragmentManager.findFragmentById(binding.fragmentEntry.id) as FragmentEntry }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,16 +57,24 @@ class ActivityHome: AppCompatActivity() {
             }
         }
 
+        binding.exportBtn.setOnClickListener {
+            exportDb.launch("*/*")
+        }
+
         if (!PDictSqlite.instance.isOpen && !PDictSqlite.instance.openDatabase(db_name, false)) {
             Log.i(TAG, "Could not open database $db_name")
             getContent.launch("*/*")
         } else {
-            var keyword = intent.extras?.getString(SHARED_PREFERENCE_NAME) ?:
+            keyword = intent.extras?.getString(SHARED_PREFERENCE_NAME) ?:
                           getSharedPreferences(SHARED_PREFERENCE_FILE, MODE_PRIVATE).getString(SHARED_PREFERENCE_NAME, null)
             Log.i(TAG, "On create $keyword");
-            if (keyword != null) {
-                fragmentEntry.search(keyword)
-            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (keyword != null) {
+            fragmentEntry.search(keyword!!)
         }
     }
 
@@ -86,7 +95,19 @@ class ActivityHome: AppCompatActivity() {
     val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             contentResolver.openInputStream(uri)?.let {
-                PDictSqlite.instance.importDatabase(it, db_name);
+                if (!PDictSqlite.instance.importDatabase(it, db_name)) {
+                    // TODO: handle error
+                }
+            }
+        }
+    }
+
+    val exportDb = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        if (uri != null) {
+            contentResolver.openOutputStream(uri)?.let {
+                if (!PDictSqlite.instance.exportDatabase(it, db_name)) {
+                    // TODO: handle error
+                }
             }
         }
     }
