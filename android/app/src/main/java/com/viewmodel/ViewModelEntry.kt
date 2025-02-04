@@ -53,20 +53,17 @@ class ViewModelEntry : ViewModel() {
 
     fun setEntry(newEntry: Entry) {
         entry.value = newEntry
-        val definitionsOldLength = definitions.size
         definitions.clear()
         definitions.addAll(newEntry.definitions)
-        definitionAdapter.notifyItemRangeChanged(0, maxOf(definitionsOldLength, definitions.size))
+        definitionAdapter.notifyDataSetChanged()
 
-        val usagesOldLength = usages.size
         usages.clear()
         usages.addAll(newEntry.usages)
-        usageAdapter.notifyItemRangeChanged(0, maxOf(usagesOldLength, usages.size))
+        usageAdapter.notifyDataSetChanged()
 
-        val groupsOldLength = groups.size
         groups.clear()
         groups.addAll(newEntry.groups)
-        groupAdapter.notifyItemRangeChanged(0, maxOf(groupsOldLength, groups.size))
+        groupAdapter.notifyDataSetChanged()
     }
 
     fun search(keyword: String): Boolean {

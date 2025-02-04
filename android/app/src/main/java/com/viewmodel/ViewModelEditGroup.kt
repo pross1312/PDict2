@@ -38,7 +38,7 @@ class EditGroupAdapter(private var data: List<EditGroupEntry>, private val onEdi
                           onEditGroupItemClicked)
     }
 
-    override fun getItemCount(): Int = data.size;
+    override fun getItemCount(): Int = data.size
     override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(data[position])
 }
 
@@ -63,7 +63,6 @@ class ViewModelEditGroup(val id: Long): ViewModel() {
                 // TODO: handle add error
                 return false
             } else {
-                Log.i(TAG, "sucess")
                 groups.add(0, EditGroupEntry(newGroup, true))
                 adapter.notifyDataSetChanged() // Stupid notifyItemInserted not working and i'm too lazy to figure out why
                 return true
