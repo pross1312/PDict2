@@ -35,7 +35,7 @@ class ActivityLearn : FragmentActivity() {
         }
         binding.editBtn.setOnClickListener {
             val intent = Intent(this, ActivityHome::class.java)
-            intent.putExtra(ActivityHome.ID_KEY_NAME, fragmentEntry.currentKeyword)
+            intent.putExtra(ActivityHome.SHARED_PREFERENCE_NAME, fragmentEntry.currentKeyword)
             startActivity(intent)
         }
     }

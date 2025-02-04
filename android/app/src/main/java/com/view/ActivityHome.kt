@@ -59,26 +59,14 @@ class ActivityHome: AppCompatActivity() {
         if (!PDictSqlite.instance.isOpen && !PDictSqlite.instance.openDatabase(db_name, false)) {
             Log.i(TAG, "Could not open database $db_name")
             getContent.launch("*/*")
-        }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        Log.i(TAG, "On save state")
-        super.onSaveInstanceState(outState)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        var keyword: String? = null
-        if (PDictSqlite.instance.isOpen) {
-            keyword = intent.extras?.getString(SHARED_PREFERENCE_NAME) ?: getSharedPreferences(SHARED_PREFERENCE_FILE, MODE_PRIVATE).getString(SHARED_PREFERENCE_NAME, null)
+        } else {
+            var keyword = intent.extras?.getString(SHARED_PREFERENCE_NAME) ?:
+                          getSharedPreferences(SHARED_PREFERENCE_FILE, MODE_PRIVATE).getString(SHARED_PREFERENCE_NAME, null)
+            Log.i(TAG, "On create $keyword");
             if (keyword != null) {
                 fragmentEntry.search(keyword)
-            } else {
-                fragmentEntry.search("ある")
             }
         }
-        Log.i(TAG, "On resume $keyword")
     }
 
     override fun onPause() {
@@ -99,7 +87,6 @@ class ActivityHome: AppCompatActivity() {
         if (uri != null) {
             contentResolver.openInputStream(uri)?.let {
                 PDictSqlite.instance.importDatabase(it, db_name);
-                fragmentEntry.search("ある")
             }
         }
     }
@@ -109,7 +96,6 @@ class ActivityHome: AppCompatActivity() {
         val TAG = "PDict:ActivityHome"
         private val db_name: String = "pdict";
         val SHARED_PREFERENCE_FILE = "pdict"
-        val SHARED_PREFERENCE_NAME = "last_search"
-        val ID_KEY_NAME = "com.view.id"
+        val SHARED_PREFERENCE_NAME = "keyword"
     }
 }
