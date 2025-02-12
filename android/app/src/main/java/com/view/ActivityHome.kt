@@ -14,8 +14,13 @@ class ActivityHome: AppCompatActivity() {
     var keyword: String? = null
     val fragmentEntry: FragmentEntry by lazy { supportFragmentManager.findFragmentById(binding.fragmentEntry.id) as FragmentEntry }
 
+    //TODO: allow multiple databases
+    //TODO: allow open app by clicking on database (auto import)
+    //TODO: make definition/usage editable
+    //TODO: fix UI (so ugly right now)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.i(TAG, "intent ${intent.data?.toString()}")
         // Apparently this i a bug since API 1.0 https://stackoverflow.com/questions/45468698/app-create-a-new-instance-when-user-click-on-app-icon
         if (!isTaskRoot && intent.hasCategory(Intent.CATEGORY_LAUNCHER) && intent.action?.equals(Intent.ACTION_MAIN) ?: false) {
             Log.i(TAG, "Stupid bug striked again!!!")
