@@ -20,6 +20,7 @@ export default {
         return {
             entry: new entry.new_entry(),
             show_answer: false,
+            param_filters: null,
             keyword: "",
         }
     },
@@ -31,15 +32,7 @@ export default {
     },
     mounted() {
         window.addEventListener("keydown", this.handle_window_keydown);
-        const param_filters = {
-            Include: [],
-            Exclude: [],
-        };
-        const params = JSON.stringify(param_filters)
-        fetch(`http://${window.location.host}/change-learn-filter?filter=${params}`).then(async result => {
-            console.log(await result.text());
-            await this.next_word();
-        });
+        this.next_word();
     },
     methods: {
         async handle_window_keydown(e) {
@@ -56,19 +49,11 @@ export default {
             }
         },
         on_filter_change(filters) {
-            this.show_answer = false;
-            const param_filters = {
+            this.param_filters = {
                 Include: Object.entries(filters).filter(([_name, mode]) => mode === '+').map(([name, _mode]) => name),
                 Exclude: Object.entries(filters).filter(([_name, mode]) => mode === '-').map(([name, _mode]) => name),
             };
-            const params = JSON.stringify(param_filters)
-            fetch(`http://${window.location.host}/change-learn-filter?filter=${params}`).then(async result => {
-                console.log(await result.text());
-                await this.next_word();
-                this.show_success_msg("Successfully applied filter")
-            }).catch(err => {
-                this.show_error_msg(err);
-            });
+            this.show_success_msg("Filter changed");
         },
         async mouse_down_left(e) {
             if (e.currentTarget === e.srcElement && e.button == 0) {
@@ -87,7 +72,10 @@ export default {
             if (this.waiting_next_word) return false;
             console.log("Next word");
             this.waiting_next_word = true;
-            const server_nextword_addr   = `http://${window.location.host}/nextword`;
+            let server_nextword_addr   = `http://${window.location.host}/nextword`;
+            if (this.param_filters !== null) {
+                server_nextword_addr   = `http://${window.location.host}/nextword?filter=${JSON.stringify(this.param_filters)}`;
+            }
             await fetch(server_nextword_addr).then(async result => {
                 if (result.headers.get("Content-Type").includes("application/json")) {
                     let data = await result.json();

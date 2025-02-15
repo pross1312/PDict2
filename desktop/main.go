@@ -62,7 +62,8 @@ const (
 	QUERY_TABLE_USAGE = "SELECT usage FROM usage WHERE entry_id = ?"
 	QUERY_TABLE_ENTRY_GROUP = "SELECT group_name FROM entry_group WHERE entry_id = ?"
 
-	QUERY_UPDATE_ENTRY = "UPDATE entry SET pronounciation = ? WHERE id = ?"
+	QUERY_UPDATE_PRONOUNCIATION_ENTRY = "UPDATE entry SET pronounciation = ? WHERE id = ?"
+	QUERY_UPDATE_LAST_READ_ENTRY = "UPDATE entry SET last_read = ? WHERE id = ?"
 
 	QUERY_DELETE_ALL_DEFINITION = "DELETE FROM definition WHERE entry_id = ?"
 	QUERY_DELETE_ALL_USAGE = "DELETE FROM usage WHERE entry_id = ?"
@@ -157,8 +158,7 @@ func query_groups(entry_id int64) []string {
 	return result
 }
 
-func process_query(wt http.ResponseWriter, req *http.Request) {
-	key := req.URL.Query().Get("key")
+func query_keyword(key string) (Entry, bool) {
 	rows, err := db.Query(QUERY_TABLE_ENTRY, key)
 	check_err(err, true, "Could not make query for entry with key " + key)
 	defer rows.Close()
@@ -173,7 +173,7 @@ func process_query(wt http.ResponseWriter, req *http.Request) {
 		definitions := query_definitions(id)
 		usages := query_usages(id)
 		groups := query_groups(id)
-		entry := Entry {
+		return Entry {
 			Id: id,
 			Keyword: keyword,
 			Pronounciation: pronounciation,
@@ -181,9 +181,19 @@ func process_query(wt http.ResponseWriter, req *http.Request) {
 			Usage: usages,
 			Group: groups,
 			LastLearned: last_read,
+		}, true
+		if rows.Next() {
+			panic("Should not have 2 row if querying using keyword")
 		}
+	}
+	return Entry{}, false
+}
+
+func process_query(wt http.ResponseWriter, req *http.Request) {
+	key := req.URL.Query().Get("key")
+	if entry, found := query_keyword(key); found {
 		json_data, err := json.Marshal(entry)
-		check_err(err, true, "Can't marshal entry into json")
+		check_err(err, true, "Can't marshal entry into json", entry.str())
 		wt.Header().Set("Content-Type", "application/json")
 		wt.WriteHeader(http.StatusOK)
 		wt.Write(json_data)
@@ -200,33 +210,40 @@ func process_update(wt http.ResponseWriter, req *http.Request, entry Entry) {
 	rows, err := tx.Query(QUERY_TABLE_ENTRY, entry.Keyword)
 	check_err(err, true, "Could not make query for entry with key " + entry.Keyword)
 
-	id := entry.Id
+	var id int64 = -1
 	exists := rows.Next()
 	if !exists {
 		log(INFO, "Entry keyword = %s does not exist, add new...", entry.Keyword)
-		_, err = tx.Exec(QUERY_INSERT_ENTRY, entry.Keyword, entry.Pronounciation, time.Now().Unix())
+		result, err := tx.Exec(QUERY_INSERT_ENTRY, entry.Keyword, entry.Pronounciation, time.Now().Unix())
 		check_err(err, true, fmt.Sprintf("Could not insert new entry for entry with keyword = %s, pronounciation = %s", entry.Keyword, entry.Pronounciation))
-
-		rows.Close()
-		rows, err = tx.Query(QUERY_TABLE_ENTRY, entry.Keyword)
-		check_err(err, true, "Could not make query for entry with key " + entry.Keyword)
-		if !rows.Next() {
-			panic("Entry must exist as i just inserted it")
+		id, err = result.LastInsertId()
+		if check_err(err, false, "Sqlite does not support LastInsertId") {
+			id = -1		 // NOTE: -_- really need to refactor
+			rows.Close() // NOTE: close to open another one which will be freed later
+			rows, err = tx.Query(QUERY_TABLE_ENTRY, entry.Keyword)
+			check_err(err, true, "Could not make query for entry with key " + entry.Keyword)
+			if !rows.Next() {
+				panic("Entry must exist as i just inserted it")
+			}
 		}
+
 	}
-	var keyword string
-	var pronounciation string 
-	var last_read int64
-	err = rows.Scan(&id, &keyword, &pronounciation, &last_read)
-	check_err(err, true, "Could not scan for data in entry table")
+	if id == -1 {
+		var keyword string
+		var pronounciation string 
+		var last_read int64
+		err = rows.Scan(&id, &keyword, &pronounciation, &last_read)
+		check_err(err, true, "Could not scan for data in entry table")
+	}
+	rows.Close()
 
 	log(INFO, "Entry id = %d", id)
 
 	if exists {
 		log(INFO, "Entry id = %d keyword = %s existed, updating...", id, entry.Keyword)
 
-		_, err = tx.Exec(QUERY_UPDATE_ENTRY, entry.Pronounciation, id)
-		check_err(err, true, fmt.Sprintf("Could not update entry with id = %d", id))
+		_, err = tx.Exec(QUERY_UPDATE_PRONOUNCIATION_ENTRY, entry.Pronounciation, id)
+		check_err(err, true, fmt.Sprintf("Could not update pronounciation for entry with id = %d", id))
 
 		_, err = tx.Exec(QUERY_DELETE_ALL_DEFINITION, id)
 		check_err(err, true, fmt.Sprintf("Could not delete old definitions for entry with id = %d", id))
@@ -287,7 +304,7 @@ func list_words_filtered(filter Filter, list *[]string) {
 // having count(eg.id) = 2
 // except select distinct g.keyword from entry g join entry_group ge on ge.entry_id = g.id and ge.group_name = 'adjective') limit 2;
 func build_include_query(builder *strings.Builder, args *[]any, includes []string) {
-	builder.WriteString("SELECT DISTINCT e.id, e.keyword FROM entry e\n")
+	builder.WriteString("SELECT DISTINCT e.* FROM entry e\n")
 	builder.WriteString("INNER JOIN entry_group eg ON eg.entry_id = e.id AND (\n")
 	for i, v := range includes {
 		builder.WriteString("    ")
@@ -304,7 +321,7 @@ func build_include_query(builder *strings.Builder, args *[]any, includes []strin
 }
 
 func build_exclude_query(builder *strings.Builder, args *[]any, excludes []string) {
-	builder.WriteString("SELECT DISTINCT e.id, e.keyword FROM entry e\n");
+	builder.WriteString("SELECT DISTINCT e.* FROM entry e\n");
 	builder.WriteString("INNER JOIN entry_group eg ON eg.entry_id = e.id AND (\n")
 	for i, v := range excludes {
 		builder.WriteString("    ")
@@ -322,7 +339,7 @@ func fetch_words_list(limit, page int, filter Filter) []string {
 	args := make([]any, 0, 3 + len(filter.Include) + len(filter.Exclude))
 
 	if len(filter.Include) > 0 && len(filter.Exclude) > 0 {
-		builder.WriteString("SELECT e.id, e.keyword FROM (\n")	
+		builder.WriteString("SELECT * FROM (\n")	
 		build_include_query(&builder, &args, filter.Include)
 		builder.WriteString("EXCEPT\n")
 		build_exclude_query(&builder, &args, filter.Exclude)
@@ -330,13 +347,13 @@ func fetch_words_list(limit, page int, filter Filter) []string {
 	} else if len(filter.Include) > 0 {
 		build_include_query(&builder, &args, filter.Include)
 	} else if len(filter.Exclude) > 0 {
-		builder.WriteString("SELECT e.id, e.keyword FROM (\n")	
-		builder.WriteString("SELECT e.id, e.keyword FROM entry e\n")
+		builder.WriteString("SELECT * FROM (\n")	
+		builder.WriteString("SELECT e.* FROM entry e\n")
 		builder.WriteString("EXCEPT\n")
 		build_exclude_query(&builder, &args, filter.Exclude);
 		builder.WriteString(") e\n");
 	} else {
-		builder.WriteString("SELECT e.id, e.keyword FROM entry e\n")
+		builder.WriteString("SELECT * FROM entry e\n")
 	}
 	builder.WriteString("ORDER BY e.id ASC\n")
 	builder.WriteString("LIMIT ?\n")
@@ -357,21 +374,18 @@ func fetch_words_list(limit, page int, filter Filter) []string {
 	for rows.Next() {
 		var id int64
 		var keyword string
-		err = rows.Scan(&id, &keyword)
-		log(INFO, "Id %d", id)
+		var pronounciation string
+		var last_read int64
+		err = rows.Scan(&id, &keyword, &pronounciation, &last_read)
 		check_err(err, true, "Could not scan for id and keyword in row")
 		result = append(result, keyword)
 	}
 	return result
 }
 
-
 func process_list(wt http.ResponseWriter, req *http.Request) {
 	query := req.URL.Query()
-	limit, page, filter := 100, 1, Filter{
-		Include: nil,
-		Exclude: nil,
-	}
+	limit, page, filter := 100, 1, Filter{ }
 	// NOTE: if value does not exists, query.Get return empty string which result in error 'strconv.Atoi: parsing "": invalid syntax'
 	if query_limit, err := strconv.Atoi(query.Get("limit")); err == nil {
 		limit = query_limit
@@ -422,68 +436,79 @@ func process_list_group(wt http.ResponseWriter, req *http.Request) {
 	}
 	log(INFO, "Sent %d groups", len(groups))
 	json_data, err := json.Marshal(struct{ Group []string }{ groups })
-	check_err(err, true, "Can't marshal groups into json")
+	check_err(err, true, "Can't marshal groups into json", groups)
 	wt.Header().Set("Content-Type", "application/json")
 	wt.WriteHeader(http.StatusOK)
 	wt.Write(json_data)
 }
 
+func fetch_next_learn_word(filter Filter) (Entry, bool) {
+	var builder strings.Builder
+	args := make([]any, 0, 3 + len(filter.Include) + len(filter.Exclude))
+
+	if len(filter.Include) > 0 && len(filter.Exclude) > 0 {
+		builder.WriteString("SELECT * FROM (\n")	
+		build_include_query(&builder, &args, filter.Include)
+		builder.WriteString("EXCEPT\n")
+		build_exclude_query(&builder, &args, filter.Exclude)
+		builder.WriteString(") e\n");
+	} else if len(filter.Include) > 0 {
+		build_include_query(&builder, &args, filter.Include)
+	} else if len(filter.Exclude) > 0 {
+		builder.WriteString("SELECT * FROM (\n")	
+		builder.WriteString("SELECT e.* FROM entry e\n")
+		builder.WriteString("EXCEPT\n")
+		build_exclude_query(&builder, &args, filter.Exclude);
+		builder.WriteString(") e\n");
+	} else {
+		builder.WriteString("SELECT * FROM entry e\n")
+	}
+	builder.WriteString("ORDER BY e.last_read ASC\n")
+	builder.WriteString("LIMIT 1\n")
+
+	query := builder.String()
+	log(INFO, query)
+	log(INFO, "%s", args)
+
+	rows, err := db.Query(query, args...)
+	check_err(err, true, "Could not make list words query")
+
+	if !rows.Next() {
+		return Entry{}, false
+	} else {
+		var id int64
+		var keyword string
+		var pronounciation string
+		var last_read int64
+		err = rows.Scan(&id, &keyword, &pronounciation, &last_read)
+		rows.Close()
+		if entry, found := query_keyword(keyword); found {
+			_, err = db.Exec(QUERY_UPDATE_LAST_READ_ENTRY, time.Now().Unix(), id)
+			check_err(err, true, fmt.Sprintf("Could not update last_read for entry with id = %d", id))
+			return entry, true
+		} else {
+			panic("We just found it before query keyword though")
+		}
+	}
+}
+
 func process_nextword(wt http.ResponseWriter, req *http.Request) {
-	panic("Unimplemented")
-//     if len(unused_words) == 0 { // switch used and unused
-//         if len(used_words) == 0 {
-//             wt.WriteHeader(http.StatusOK)
-//             fmt.Fprint(wt, "No words to learn")
-//             return
-//         }
-// 		list_words_filtered(current_learn_filter, &unused_words)
-// 		for i := len(used_words)-1; i >= 0; i-- {
-// 			if is_fit_filter(Dict[used_words[i]], current_learn_filter) {
-// 				used_words[i] = used_words[len(used_words)-1]
-// 				used_words = used_words[:len(used_words)-1]
-// 			}
-// 		}
-//         log(INFO, "Switch used and unused")
-//         log(INFO, "%d words left to learn.", len(unused_words))
-//     }
-// 	if len(unused_words) == 0 {
-// 		wt.WriteHeader(http.StatusOK)
-// 		fmt.Fprint(wt, "No words to learn")
-// 		return
-// 	}
-//     index := len(unused_words)-1
-//     key := unused_words[index]
-//     if entry, found := Dict[key]; found {
-//         json_data, err := json.Marshal(entry)
-//         if check_err(err, false, "Can't parse json for `nextword` request") {
-//             wt.WriteHeader(http.StatusInternalServerError)
-//             wt.Write([]byte(log_format(ERROR, err.Error())))
-//         } else {
-//             wt.Header().Set("Content-Type", "application/json")
-//             wt.WriteHeader(http.StatusOK)
-//             wt.Write(json_data)
-// 			// TODO: Maybe some data race will happen here because i also change unused_words and used_words when add new entry
-// 			//       which probably run in different thread
-// 			// TODO: Maybe add a mutex
-// 			unused_words[index] = unused_words[len(unused_words)-1]
-// 			unused_words[len(unused_words)-1] = key
-// 			unused_words = unused_words[:len(unused_words)-1]
-// 			used_words = append(used_words, key)
-// 			save_used_words()
-// 
-// 			// update last check out this key
-// 			last_used := entry.LastLearned
-// 			entry.LastLearned = time.Now().Unix()
-// 			Dict[key] = entry
-// 			save_dict()
-// 
-// 			log(INFO, "Sent entry `%s`, last used: `%s`", entry.Keyword, time.Unix(last_used, 0))
-//         }
-//     } else {
-//         log(ERROR, "Can't find",  key, len(unused_words), len(Dict))
-//         wt.WriteHeader(http.StatusInternalServerError)
-//         fmt.Fprintf(wt, "[ERROR] Unused list probably is invalid '%s'", key)
-//     }
+	query := req.URL.Query()
+	filter := Filter { }
+	if query.Has("filter") {
+		json.Unmarshal([]byte(query.Get("filter")), &filter)
+	}
+	if entry, found := fetch_next_learn_word(filter); found {
+		json_data, err := json.Marshal(entry)
+		check_err(err, true, "Can't marshal entry into json", entry.str())
+		wt.Header().Set("Content-Type", "application/json")
+		wt.WriteHeader(http.StatusOK)
+		wt.Write(json_data)
+		log(INFO, "Sent entry `%s`, last used: `%s`", entry.Keyword, time.Unix(entry.LastLearned, 0))
+	} else {
+		wt.WriteHeader(http.StatusOK)
+		fmt.Fprint(wt, "No words to learn")
+	}
 }
 
 func remove_entry(word string) {
@@ -520,8 +545,6 @@ func (sv MyServer) ServeHTTP(wt http.ResponseWriter, req *http.Request) {
             process_list(wt, req)
         } else if (req.URL.Path == "/nextword") {
             process_nextword(wt, req)
-        } else if (req.URL.Path == "/change-learn-filter") {
-			panic("Unimplemented")
         } else if (req.URL.Path == "/list-group") {
 			process_list_group(wt, req)
         } else {
@@ -643,7 +666,7 @@ func log(level LogLevel, format string, args ...any) {
 	fmt.Print(log_format(level, format, args...))
 }
 
-func check_err(err error, fatal bool, info ...string) bool {
+func check_err(err error, fatal bool, info ...any) bool {
     if err != nil {
 		var log_level LogLevel
         if fatal {
