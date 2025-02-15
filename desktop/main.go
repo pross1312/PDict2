@@ -394,7 +394,8 @@ func process_list(wt http.ResponseWriter, req *http.Request) {
 		page = query_page
 	}
 	if query.Has("filter") {
-		json.Unmarshal([]byte(query.Get("filter")), &filter)
+		err := json.Unmarshal([]byte(query.Get("filter")), &filter)
+		check_err(err, false, "Frontend messed up filter query")
 	}
 	list := fetch_words_list(limit, page, filter)
 	json_data, err := json.Marshal(list)
@@ -496,7 +497,8 @@ func process_nextword(wt http.ResponseWriter, req *http.Request) {
 	query := req.URL.Query()
 	filter := Filter { }
 	if query.Has("filter") {
-		json.Unmarshal([]byte(query.Get("filter")), &filter)
+		err := json.Unmarshal([]byte(query.Get("filter")), &filter)
+		check_err(err, false, "Frontend messed up filter query")
 	}
 	if entry, found := fetch_next_learn_word(filter); found {
 		json_data, err := json.Marshal(entry)
