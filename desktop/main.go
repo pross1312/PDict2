@@ -3,6 +3,7 @@ package main
 import (
 	"sync"
 	"time"
+	"strconv"
     "slices"
 	"errors"
     "runtime"
@@ -70,7 +71,7 @@ const (
 	QUERY_INSERT_ENTRY = "INSERT INTO entry(keyword, pronounciation, last_read) VALUES(?, ?, ?)"
 	QUERY_INSERT_DEFINITION = "INSERT INTO definition(entry_id, definition) VALUES(?, ?)"
 	QUERY_INSERT_USAGE = "INSERT INTO usage(entry_id, usage) VALUES(?, ?)"
-	QUERY_INSERT_GROUP = "INSERT INTO entry_group(entry_id, group_name) VALUES(?, ?)"
+	QUERY_INSERT_GROUP = "INSERT INTO entry_group(entry_id, group_name) VALUES(?, LOWER(?))"
 )
 
 var (
@@ -200,14 +201,28 @@ func process_update(wt http.ResponseWriter, req *http.Request, entry Entry) {
 	check_err(err, true, "Could not make query for entry with key " + entry.Keyword)
 
 	id := entry.Id
-	if rows.Next() { // has entry, then we are trying to upadte
-		var keyword string
-		var pronounciation string 
-		// TODO: change last_read into last_learned
-		var last_read int64
-		err = rows.Scan(&id, &keyword, &pronounciation, &last_read)
-		check_err(err, true, "Could not scan for data in entry table")
+	exists := rows.Next()
+	if !exists {
+		log(INFO, "Entry keyword = %s does not exist, add new...", entry.Keyword)
+		_, err = tx.Exec(QUERY_INSERT_ENTRY, entry.Keyword, entry.Pronounciation, time.Now().Unix())
+		check_err(err, true, fmt.Sprintf("Could not insert new entry for entry with keyword = %s, pronounciation = %s", entry.Keyword, entry.Pronounciation))
 
+		rows.Close()
+		rows, err = tx.Query(QUERY_TABLE_ENTRY, entry.Keyword)
+		check_err(err, true, "Could not make query for entry with key " + entry.Keyword)
+		if !rows.Next() {
+			panic("Entry must exist as i just inserted it")
+		}
+	}
+	var keyword string
+	var pronounciation string 
+	var last_read int64
+	err = rows.Scan(&id, &keyword, &pronounciation, &last_read)
+	check_err(err, true, "Could not scan for data in entry table")
+
+	log(INFO, "Entry id = %d", id)
+
+	if exists {
 		log(INFO, "Entry id = %d keyword = %s existed, updating...", id, entry.Keyword)
 
 		_, err = tx.Exec(QUERY_UPDATE_ENTRY, entry.Pronounciation, id)
@@ -221,12 +236,6 @@ func process_update(wt http.ResponseWriter, req *http.Request, entry Entry) {
 
 		_, err = tx.Exec(QUERY_DELETE_ALL_GROUP, id)
 		check_err(err, true, fmt.Sprintf("Could not delete old groups for entry with id = %d", id))
-	} else { 		 // add new
-
-		log(INFO, "Entry keyword = %s does not exist, add new...", entry.Keyword)
-
-		_, err = tx.Exec(QUERY_INSERT_ENTRY, entry.Keyword, entry.Pronounciation, time.Now().Unix())
-		check_err(err, true, fmt.Sprintf("Could not insert new entry for entry with keyword = %s, pronounciation = %s", entry.Keyword, entry.Pronounciation))
 	}
 
 	for _, definition := range entry.Definition {
@@ -272,30 +281,126 @@ func list_words_filtered(filter Filter, list *[]string) {
 // 	})
 }
 
+// select * from (select distinct e.keyword from entry e
+// join entry_group eg on eg.entry_id = e.id and (eg.group_name = 'transport' or eg.group_name = 'noun')
+// group by e.id
+// having count(eg.id) = 2
+// except select distinct g.keyword from entry g join entry_group ge on ge.entry_id = g.id and ge.group_name = 'adjective') limit 2;
+func build_include_query(builder *strings.Builder, args *[]any, includes []string) {
+	builder.WriteString("SELECT DISTINCT e.id, e.keyword FROM entry e\n")
+	builder.WriteString("INNER JOIN entry_group eg ON eg.entry_id = e.id AND (\n")
+	for i, v := range includes {
+		builder.WriteString("    ")
+		if i != 0 {
+			builder.WriteString("OR ")
+		}
+		builder.WriteString("eg.group_name = ?\n")
+		*args = append(*args, v)
+	}
+	builder.WriteString(")\n")
+	builder.WriteString("GROUP BY e.id\n")
+	builder.WriteString("HAVING COUNT(eg.group_name) = ?\n")
+	*args = append(*args, len(includes))
+}
+
+func build_exclude_query(builder *strings.Builder, args *[]any, excludes []string) {
+	builder.WriteString("SELECT DISTINCT e.id, e.keyword FROM entry e\n");
+	builder.WriteString("INNER JOIN entry_group eg ON eg.entry_id = e.id AND (\n")
+	for i, v := range excludes {
+		builder.WriteString("    ")
+		if i != 0 {
+			builder.WriteString("OR ")
+		}
+		builder.WriteString("eg.group_name = ?\n")
+		*args = append(*args, v)
+	}
+	builder.WriteString(")\n");
+}
+
+func build_list_words_query(limit, page int, filter Filter) []string {
+	var builder strings.Builder
+	args := make([]any, 0, 3 + len(filter.Include) + len(filter.Exclude))
+
+	if len(filter.Include) > 0 && len(filter.Exclude) > 0 {
+		builder.WriteString("SELECT * FROM (\n")	
+		build_include_query(&builder, &args, filter.Include)
+		builder.WriteString("EXCEPT\n")
+		build_exclude_query(&builder, &args, filter.Exclude)
+		builder.WriteString(")\n");
+		builder.WriteString("ORDER BY id ASC\n")
+		builder.WriteString("LIMIT ?\n")
+		builder.WriteString("OFFSET ?\n")
+		args = append(args, limit)
+		args = append(args, (page - 1) * limit)
+	} else if len(filter.Include) > 0 {
+		build_include_query(&builder, &args, filter.Include)
+		builder.WriteString("ORDER BY e.id ASC\n")
+		builder.WriteString("LIMIT ?\n")
+		builder.WriteString("OFFSET ?\n")
+		args = append(args, limit)
+		args = append(args, (page - 1) * limit)
+	} else if len(filter.Exclude) > 0 {
+		builder.WriteString("SELECT e.id, e.keyword FROM entry e\n")
+		builder.WriteString("ORDER BY e.id ASC\n")
+		builder.WriteString("LIMIT ?\n")
+		builder.WriteString("OFFSET ?\n")
+		args = append(args, limit)
+		args = append(args, (page - 1) * limit)
+		builder.WriteString("EXCEPT\n")
+		build_exclude_query(&builder, &args, filter.Exclude);
+	} else {
+		builder.WriteString("SELECT e.id, e.keyword FROM entry e\n")
+		builder.WriteString("ORDER BY e.id ASC\n")
+		builder.WriteString("LIMIT ?\n")
+		builder.WriteString("OFFSET ?\n")
+		args = append(args, limit)
+		args = append(args, (page - 1) * limit)
+	}
+
+	query := builder.String()
+	log(INFO, query)
+	log(INFO, "%s", args)
+
+	rows, err := db.Query(query, args...)
+	check_err(err, true, "Could not make list words query")
+	defer rows.Close()
+
+	result := make([]string, 0, INIT_ARRAY_BUFFER)
+
+	for rows.Next() {
+		var id int64
+		var keyword string
+		err = rows.Scan(&id, &keyword)
+		log(INFO, "Id %d", id)
+		check_err(err, true, "Could not scan for id and keyword in row")
+		result = append(result, keyword)
+	}
+	return result
+}
+
 func process_list(wt http.ResponseWriter, req *http.Request) {
-	panic("Unimplemented")
-//	query := req.URL.Query()
-//
-//    var list []string
-//	if query.Has("filter") {
-//		list = make([]string, 0, INIT_ARRAY_BUFFER)
-//		var filter Filter
-//		json.Unmarshal([]byte(query.Get("filter")), &filter)
-//		list_words_filtered(filter, &list)
-//	} else {
-//		list = make([]string, 0, len(Dict))
-//		for keyword, _ := range Dict { list = append(list, keyword) }
-//	}
-//    json_data, err := json.Marshal(list)
-//    if check_err(err, false, "Can't parse json for `list` request") {
-//        wt.WriteHeader(http.StatusInternalServerError)
-//        wt.Write([]byte(log_format(ERROR, err.Error())))
-//    } else {
-//        log(INFO, "Sent %d words", len(list))
-//        wt.Header().Set("Content-Type", "application/json")
-//        wt.WriteHeader(http.StatusOK)
-//        wt.Write(json_data)
-//    }
+	query := req.URL.Query()
+	limit, page, filter := 100, 1, Filter{
+		Include: nil,
+		Exclude: nil,
+	}
+	// NOTE: if value does not exists, query.Get return empty string which result in error 'strconv.Atoi: parsing "": invalid syntax'
+	if query_limit, err := strconv.Atoi(query.Get("limit")); err == nil {
+		limit = query_limit
+	}
+	if query_page, err := strconv.Atoi(query.Get("page")); err == nil && query_page > 0 {
+		page = query_page
+	}
+	if query.Has("filter") {
+		json.Unmarshal([]byte(query.Get("filter")), &filter)
+	}
+	list := build_list_words_query(limit, page, filter)
+	json_data, err := json.Marshal(list)
+	check_err(err, true, "Could not marlshal keywords list into json")
+	log(INFO, "Sent %d words %s", len(list), list)
+	wt.Header().Set("Content-Type", "application/json")
+	wt.WriteHeader(http.StatusOK)
+	wt.Write(json_data)
 }
 
 func process_serve_file(wt http.ResponseWriter, req *http.Request) {
@@ -520,7 +625,8 @@ func main() {
 	log(INFO, "Number of entries: %d", count_entry())
     start_default_browser()
 	log(INFO, "Server start on http://%s",  SERVER_ADDR)
-    http.ListenAndServe(SERVER_ADDR, MyServer{})
+	err = http.ListenAndServe(SERVER_ADDR, MyServer{})
+	check_err(err, true)
 }
 
 type LogLevel int
