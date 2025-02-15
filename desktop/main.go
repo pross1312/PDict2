@@ -317,45 +317,32 @@ func build_exclude_query(builder *strings.Builder, args *[]any, excludes []strin
 	builder.WriteString(")\n");
 }
 
-func build_list_words_query(limit, page int, filter Filter) []string {
+func fetch_words_list(limit, page int, filter Filter) []string {
 	var builder strings.Builder
 	args := make([]any, 0, 3 + len(filter.Include) + len(filter.Exclude))
 
 	if len(filter.Include) > 0 && len(filter.Exclude) > 0 {
-		builder.WriteString("SELECT * FROM (\n")	
+		builder.WriteString("SELECT e.id, e.keyword FROM (\n")	
 		build_include_query(&builder, &args, filter.Include)
 		builder.WriteString("EXCEPT\n")
 		build_exclude_query(&builder, &args, filter.Exclude)
-		builder.WriteString(")\n");
-		builder.WriteString("ORDER BY id ASC\n")
-		builder.WriteString("LIMIT ?\n")
-		builder.WriteString("OFFSET ?\n")
-		args = append(args, limit)
-		args = append(args, (page - 1) * limit)
+		builder.WriteString(") e\n");
 	} else if len(filter.Include) > 0 {
 		build_include_query(&builder, &args, filter.Include)
-		builder.WriteString("ORDER BY e.id ASC\n")
-		builder.WriteString("LIMIT ?\n")
-		builder.WriteString("OFFSET ?\n")
-		args = append(args, limit)
-		args = append(args, (page - 1) * limit)
 	} else if len(filter.Exclude) > 0 {
+		builder.WriteString("SELECT e.id, e.keyword FROM (\n")	
 		builder.WriteString("SELECT e.id, e.keyword FROM entry e\n")
-		builder.WriteString("ORDER BY e.id ASC\n")
-		builder.WriteString("LIMIT ?\n")
-		builder.WriteString("OFFSET ?\n")
-		args = append(args, limit)
-		args = append(args, (page - 1) * limit)
 		builder.WriteString("EXCEPT\n")
 		build_exclude_query(&builder, &args, filter.Exclude);
+		builder.WriteString(") e\n");
 	} else {
 		builder.WriteString("SELECT e.id, e.keyword FROM entry e\n")
-		builder.WriteString("ORDER BY e.id ASC\n")
-		builder.WriteString("LIMIT ?\n")
-		builder.WriteString("OFFSET ?\n")
-		args = append(args, limit)
-		args = append(args, (page - 1) * limit)
 	}
+	builder.WriteString("ORDER BY e.id ASC\n")
+	builder.WriteString("LIMIT ?\n")
+	builder.WriteString("OFFSET ?\n")
+	args = append(args, limit)
+	args = append(args, (page - 1) * limit)
 
 	query := builder.String()
 	log(INFO, query)
@@ -378,6 +365,7 @@ func build_list_words_query(limit, page int, filter Filter) []string {
 	return result
 }
 
+
 func process_list(wt http.ResponseWriter, req *http.Request) {
 	query := req.URL.Query()
 	limit, page, filter := 100, 1, Filter{
@@ -394,7 +382,7 @@ func process_list(wt http.ResponseWriter, req *http.Request) {
 	if query.Has("filter") {
 		json.Unmarshal([]byte(query.Get("filter")), &filter)
 	}
-	list := build_list_words_query(limit, page, filter)
+	list := fetch_words_list(limit, page, filter)
 	json_data, err := json.Marshal(list)
 	check_err(err, true, "Could not marlshal keywords list into json")
 	log(INFO, "Sent %d words %s", len(list), list)
